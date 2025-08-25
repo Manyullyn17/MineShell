@@ -1,0 +1,4 @@
+installed_modpack/
+instances/
+**/__pycache__/
+*.pyc

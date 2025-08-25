@@ -1,0 +1,54 @@
+Screen {
+    align: center middle;
+}
+
+#instance-grid {
+    content-align: center middle;
+    grid-size: 3 3;
+    grid-gutter: 1;
+    grid-rows: 1;
+    grid-columns: 1fr;
+    margin: 1 11;
+    padding: 2 5;
+    border: wide $primary 80%;
+    background: $surface;
+    height: auto;
+    width: 100%;
+}
+
+.detail.status {
+    width: 1fr;
+}
+
+.detail.status.left {
+    content-align: left middle;
+}
+
+.detail.status.right {
+    content-align: right middle;
+}
+
+#status-mc-version {
+    column-span: 3;
+}
+
+#grid-spacer {
+    height: 1fr;
+}
+
+#button-grid {
+    content-align: center middle;
+    grid-size: 5 2;
+    grid-gutter: 1;
+    grid-rows: 3;
+    grid-columns: 1fr;
+    margin: 1 5;
+    padding: 1 5;
+    height: auto;
+    width: 100%;
+}
+
+.detail.button {
+    width: 1fr;
+    margin: 0 1;
+}
