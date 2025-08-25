@@ -2,6 +2,8 @@ import unicodedata, re, httpx, aiofiles
 from datetime import datetime
 from pathlib import Path
 from config import DATE_FORMAT
+from textual.widgets import Select
+from textual.binding import Binding
 
 def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
     """Convert an ISO8601 datetime string (from Mojang API) into the global DATE_FORMAT."""
@@ -36,3 +38,26 @@ async def download_file(url: str, dest: Path, progress_cb=None, step=None, cance
                     downloaded += len(chunk)
                     if progress_cb:
                         progress_cb(total, downloaded, step=step)
+
+
+class CustomSelect(Select):
+    BINDINGS = [
+        Binding(
+            "enter,space",
+            "show_overlay",
+            "Show menu",
+            show=False,
+        )
+    ]
+
+    def on_key(self, event):
+        """Override to prevent up/down from opening the menu."""
+        if event.key in ("up", "down") and not self.expanded:
+            # Let the default navigation work, but don’t trigger menu opening
+            screen = self.app.screen
+            if hasattr(screen, "action_focus_move"):
+                getattr(screen, "action_focus_move")(event.key)
+            event.stop()
+            return
+        # Fallback to normal Select behavior
+        return super()._on_key(event)

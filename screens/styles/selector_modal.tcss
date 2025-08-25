@@ -7,5 +7,6 @@ ModalScreen {
     height: auto;
     max-width: 80%;
     max-height: 80%;
-    border: panel $accent-lighten-3 80%;
+    min-width: 30;
+    border: panel $accent-lighten-1 80%;
 }

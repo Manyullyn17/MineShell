@@ -7,7 +7,7 @@ USER_AGENT = "manyullyn/mineshell/0.1.0 (https://github.com/manyullyn)"
 HEADERS={"User-Agent": USER_AGENT}
 
 class ModrinthAPI(SourceAPI):
-    async def search_modpacks(self, query: str, limit: int=20) -> dict[str, str | list[str]]:
+    async def search_modpacks(self, query: str, limit: int=20) -> tuple[str, list[dict[str, str | list[str]]]]:
         """Search modpacks on Modrinth and return data for the selector modal."""
         async with httpx.AsyncClient() as client:
             resp = await client.get(
@@ -26,32 +26,39 @@ class ModrinthAPI(SourceAPI):
         # Build rows for the modal: [project_id, title, slug, downloads, client/server]
         rows = []
         for hit in results:
-            rows.append([
-                hit["title"],             # name to show
-                hit["author"],
-                f"{hit['downloads']:,}",  # format downloads with commas
-                await self.get_modloader_from_categories(hit["categories"]),
-                hit["slug"],
-                hit["description"],
-            ])
+            rows.append({
+                "name": hit["title"],             # name to show
+                "author": hit["author"],
+                "downloads": f"{hit['downloads']:,}",  # format downloads with commas
+                "modloader": await self.get_modloader_from_categories(hit["categories"]),
+                "categories": await self.get_only_categories_from_categories(hit["categories"]),
+                "slug": hit["slug"],
+                "description": hit["description"],
+            })
 
         # Define columns
-        columns = ["Name", "Author", "Downloads", "Modloader", "Slug", "Description"]
+        #columns = ["Name", "Author", "Downloads", "Modloader", "Categories", "Slug", "Description"] # refactor data to be dict, lotta work
 
         # Return data for the modal
-        return {
-            "title": f"Select Modpack (search: {query})",
-            "rows": rows,
-            "columns": columns,
-        }
+        return f"Select Modpack (Search: {query})", rows
 
-    async def get_modloader_from_categories(self, categories: list[str]) -> str:
+    async def get_modloader_from_categories(self, categories: list[str]) -> list[str]:
+        loaders: list = []
         for cat in categories:
             cat_lower = cat.lower()
             if cat_lower in MODLOADERS:
                 # Capitalize nicely for display
-                return cat_lower.capitalize()
-        return "Unknown"
+                loaders.append(cat_lower.capitalize())
+        return loaders
+    
+    async def get_only_categories_from_categories(self, categories: list[str]) -> list[str]:
+        categories_list: list = []
+        for cat in categories:
+            cat_lower = cat.lower()
+            if cat_lower not in MODLOADERS:
+                # Capitalize nicely for display
+                categories_list.append(cat_lower.capitalize())
+        return categories_list
 
     async def get_modpack_versions(self, modpack_id: str) -> list[dict]:
         """
@@ -70,58 +77,6 @@ class ModrinthAPI(SourceAPI):
         # Build simplified list
         return versions
     
-    async def get_modlist(self, dependencies: dict) -> list[dict]:
-        """
-        Given a Modrinth modpack version object, fetch and return a list of server-side mods.
-
-        Each item in the returned list is a dictionary with keys:
-            - name
-            - project_id
-            - version_id
-            - version_number
-            - download_url
-
-        Args:
-            modpack_version: A Modrinth version JSON object for a modpack
-
-        Returns:
-            List of dictionaries representing server-side mods in the modpack
-        """
-        # Extract project IDs from the modpack version's dependencies
-        project_ids = [dep["project_id"] for dep in dependencies if dep["project_id"]]
-
-        # Fetch project info for these IDs
-        projects = await fetch_projects(project_ids)
-        if not projects:
-            return []
-
-        # Collect all version IDs to fetch
-        version_ids = [dep["version_id"] for dep in dependencies if dep["version_id"]]
-
-        # Fetch specific versions by ID
-        versions = await fetch_versions(version_ids)
-
-        modlist = []
-        for version in versions:
-            project = projects.get(version["project_id"])
-            if not project:
-                continue
-            modlist.append({
-                "project_id": version["project_id"],
-                "version_id": version["id"],
-                "slug": project.get("slug"),
-                "name": project.get("title"),
-                "description": project.get("description"),
-                "version_number": version.get("version_number"),
-                "date_published": version.get("date_published"),
-                "file_name": version["files"][0]["filename"] if version.get("files") else None,
-                "download_url": version["files"][0]["url"] if version.get("files") else None,
-                "loaders": project.get("loaders"),
-                "type": 'datapack' if 'datapack' in project.get("loaders", []) else 'mod'
-            })
-
-        return modlist
-
 async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
     """
     Fetch project info for a list of project IDs from Modrinth.
@@ -172,3 +127,55 @@ async def fetch_versions(version_ids: list[str]) -> list[dict]:
         versions_list = resp.json()
 
     return versions_list
+
+async def get_modlist(self, dependencies: dict) -> list[dict]:
+        """
+        Given a Modrinth modpack version object, fetch and return a list of server-side mods.
+
+        Each item in the returned list is a dictionary with keys:
+            - name
+            - project_id
+            - version_id
+            - version_number
+            - download_url
+
+        Args:
+            modpack_version: A Modrinth version JSON object for a modpack
+
+        Returns:
+            List of dictionaries representing server-side mods in the modpack
+        """
+        # Extract project IDs from the modpack version's dependencies
+        project_ids = [dep["project_id"] for dep in dependencies if dep["project_id"]]
+
+        # Fetch project info for these IDs
+        projects = await fetch_projects(project_ids)
+        if not projects:
+            return []
+
+        # Collect all version IDs to fetch
+        version_ids = [dep["version_id"] for dep in dependencies if dep["version_id"]]
+
+        # Fetch specific versions by ID
+        versions = await fetch_versions(version_ids)
+
+        modlist = []
+        for version in versions:
+            project = projects.get(version["project_id"])
+            if not project:
+                continue
+            modlist.append({
+                "project_id": version["project_id"],
+                "version_id": version["id"],
+                "slug": project.get("slug"),
+                "name": project.get("title"),
+                "description": project.get("description"),
+                "version_number": version.get("version_number"),
+                "date_published": version.get("date_published"),
+                "file_name": version["files"][0]["filename"] if version.get("files") else None,
+                "download_url": version["files"][0]["url"] if version.get("files") else None,
+                "loaders": project.get("loaders"),
+                "type": 'datapack' if 'datapack' in project.get("loaders", []) else 'mod'
+            })
+
+        return modlist

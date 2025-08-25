@@ -1,8 +1,8 @@
-from textual.widgets import DataTable, Label
+from textual.widgets import DataTable
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
 from textual.binding import Binding
-from textual.containers import Grid
+from screens.filter_modal import FilterModal
 
 class SelectorModal(ModalScreen[str]):
     """A reusable modal that can show a list of values with optional extra info."""
@@ -10,45 +10,48 @@ class SelectorModal(ModalScreen[str]):
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'back', show=False),
+            Binding('f', 'filter', 'Filter', show=True),
+            Binding('r', 'reset', 'Reset', show=True),
         ]
 
-    def __init__(self, title: str, choices: list[list[str] | str], columns: list[str], height: int=12, width: int=40, return_field: str='', hide_return_field: bool=False):
+    def __init__(self, title: str, choices: list[dict[str, str | list[str]]], return_field: str='', hide_return_field: bool=False, show_filter: bool = True, filter_columns: list[str] | None = None):
         super().__init__()
-        self.title = title
+        self.title_txt = title
+        self.subtitle_txt = 'f to filter, r to reset' if show_filter else ''
         # Normalize choices: make sure every item is a list
-        self.choices = [c if isinstance(c, list) else [c] for c in choices]
-        self.columns = columns
-        self.height = height
-        self.width = width
-        self.return_field = return_field
+        self.choices = choices
+        self.return_field: str = return_field if return_field else next(iter(choices[0]))
         self.hide_return_field = hide_return_field
+        self.filter_columns = filter_columns
 
-        self.return_index = 0
-        if return_field and return_field in columns:
-            self.return_index = columns.index(return_field)
+        self.show_filter = show_filter
 
     def compose(self) -> ComposeResult:
         # Determine the maximum number of columns in choices
-        max_columns = max(len(choice) for choice in self.choices)
+        self.max_columns = max(len(choice) for choice in self.choices)
 
         # Create the table
-        table = DataTable(id="selector-list", cursor_type='row', zebra_stripes=True)
+        self.table = DataTable(id="selector-list", cursor_type='row', zebra_stripes=True)
         # Add columns dynamically
-        for i in range(max_columns):
-            col_name = self.columns[i] if i < len(self.columns) else ''
-            if self.hide_return_field and i == self.return_index:
-                table.add_column(col_name, width=0)
+        for column in self.choices[0].keys():
+            if self.hide_return_field and column == self.return_field:
+                self.table.add_column(column.replace('_', ' ').title(), width=0)
             else:
-                table.add_column(col_name)
+                self.table.add_column(column.replace('_', ' ').title())
+
+        # for i in range(self.max_columns):
+        #     col_name = self.columns[i] if i < len(self.columns) else ''
+        #     if self.hide_return_field and i == self.return_index:
+        #         self.table.add_column(col_name, width=0)
+        #     else:
+        #         self.table.add_column(col_name)
 
         # Add rows
-        for choice in self.choices:
-            # Fill missing columns with empty strings
-            row = choice + [""] * (max_columns - len(choice))
-            table.add_row(*row, key=choice[self.return_index])
+        self.load_table(self.choices)
 
-        table.border_title = self.title
-        yield table
+        self.table.border_title = self.title_txt
+        self.table.border_subtitle = self.subtitle_txt
+        yield self.table
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_row = event.row_key.value
@@ -56,3 +59,42 @@ class SelectorModal(ModalScreen[str]):
 
     def action_back(self):
         self.dismiss()
+
+    def action_filter(self):
+        def filter_chosen(filter: dict | None) -> None:
+            if filter:
+                self.table.border_title = self.title_txt + ' (Filter: ' + ', '.join(f'{col.title()}: {val}' for col, val in filter.items()) + ')'
+                self.table.clear()
+                filtered_data = [row for row in self.choices
+                    if all(
+                        (value in cell if isinstance(cell := row[col], list) else cell == value)
+                        for col, value in filter.items()
+                    )]
+                self.load_table(filtered_data)
+            else:
+                self.table.border_title = self.title_txt
+                self.table.clear()
+                self.load_table(self.choices)
+        
+        self.app.push_screen(FilterModal(self.choices, self.filter_columns), filter_chosen)
+        return
+
+    def action_reset(self):
+        self.table.border_title = self.title_txt
+        self.table.clear()
+        self.load_table(self.choices)
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == 'filter' and not self.show_filter:
+            return False
+        if action == 'reset' and not self.show_filter:
+            return False
+        return super().check_action(action, parameters)
+
+    def load_table(self, data: list[dict[str, str | list[str]]]):
+        for choice in data:
+            row = [
+                ', '.join(cell) if isinstance(cell, list) else cell
+                for cell in choice.values()
+            ]
+            self.table.add_row(*row, key=str(choice[self.return_field]))

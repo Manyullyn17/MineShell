@@ -17,8 +17,8 @@ from backend.api.curseforge import CurseforgeAPI
 from backend.api.ftb import FTBAPI
 from backend.api.mojang import get_minecraft_versions
 from backend.api.fabric import list_fabric_versions
-from backend.storage.instance import InstanceConfig
-from helpers import format_date, sanitize_filename
+from backend.storage.instance import InstanceConfig, ModList, ModEntry
+from helpers import format_date, sanitize_filename, CustomSelect
 
 class NewInstanceScreen(Screen):
     CSS_PATH = 'styles/new_instance_screen.tcss'
@@ -96,8 +96,6 @@ class NewInstanceScreen(Screen):
     modpack_slug: str = ''
 
     selected_modpack_version: dict = {}
-
-    modlist: list[dict] = []
 
     selected_minecraft_version: dict = {}
 
@@ -188,7 +186,7 @@ class NewInstanceScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
-            case'back':
+            case 'back':
                 self.action_back()
             case 'install':
                 self.install()                    
@@ -203,9 +201,6 @@ class NewInstanceScreen(Screen):
                 self.select_mc_version()
             case 'modloader_version_selector':
                 self.select_modloader_version()
-            case 'modlist_button':
-                self.query_one('#modlist_button').loading = True
-                self.run_worker(self.show_modlist(), exclusive=True, name='modlist_load')
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         match event.input.id:
@@ -215,40 +210,30 @@ class NewInstanceScreen(Screen):
                 return
 
     async def open_modpack_selector(self, query: str):
-        # huge issue: modpacks that support multiple modloaders
-        data = await self.source_api.search_modpacks(query, limit=20) # get limit from settings, add way to load more
-
-        columns = data["columns"]
-        slug_map = {
-            row[columns.index("Slug")]: {columns[i]: row[i] for i in range(len(columns))}
-            for row in data["rows"]
-        }
+        title, data = await self.source_api.search_modpacks(query, limit=20) # get limit from settings, add way to load more
 
         async def modpack_selected(result: str | None) -> None:
             if result:
-                selected_pack = slug_map.get(result)
-                if selected_pack: # ["Name", "Author", "Downloads", "Modloader", "Slug", "Description"]
-                    self.modpack_name = selected_pack["Name"]
-                    self.modpack_slug = selected_pack["Slug"]
+                selected_pack = next((r for r in data if r["slug"] == result), None)
+                if selected_pack: # ["Name", "Author", "Downloads", "Modloader", "Categories", "Slug", "Description"]
+                    self.modpack_name = str(selected_pack["name"])
+                    self.modpack_slug = str(selected_pack["slug"])
                     self.instance_name.value = self.modpack_name
-                    self.versions = await self.source_api.get_modpack_versions(selected_pack["Slug"])
-                    self.description.update(selected_pack["Description"])
-                    self.author.update(selected_pack["Author"])
+                    self.versions = await self.source_api.get_modpack_versions(str(selected_pack["slug"]))
+                    self.description.update(str(selected_pack["description"]))
+                    self.author.update(str(selected_pack["author"]))
                     self.version_selector.label = self.versions[0]["version_number"]
                     self.selected_modpack_version = self.versions[0]
-                    self.modlist = [] # clear modlist when changing modpack
             self.query_one('#search_button').loading = False
 
 
         await self.app.push_screen(
             SelectorModal(
-                title=str(data["title"]),
-                choices=list(data["rows"]),
-                columns=list(data["columns"]),
-                height=20,
-                width=80,
-                return_field='Slug',
-                hide_return_field=True
+                title=title,
+                choices=data,
+                return_field='slug',
+                hide_return_field=True,
+                filter_columns=["author", "modloader", "categories"]
             ),
             modpack_selected
         )
@@ -332,6 +317,7 @@ class NewInstanceScreen(Screen):
         if self.install_mode == 'modpack':
             if not self.versions or not self.selected_modpack_version or not self.instance_name.value:
                 self.notify('Could not install Modpack, make sure all Fields are filled.', severity="error", timeout=5)
+                self.query_one('#install').loading = False
                 return
             version = self.selected_modpack_version
             
@@ -357,7 +343,7 @@ class NewInstanceScreen(Screen):
                 path=instance_path,
             )
 
-            self.app.push_screen(ProgressModal(instance, version["dependencies"], self.modlist, mode='modpack'), install_finished)
+            self.app.push_screen(ProgressModal(instance, version["dependencies"], mode='modpack'), install_finished)
 
         # Modloader only install logic
         elif self.install_mode == 'modloader':
@@ -376,10 +362,11 @@ class NewInstanceScreen(Screen):
                 path=instance_path,
             )
 
-            self.app.push_screen(ProgressModal(instance, mode='modloader', mc_version_url=self.selected_minecraft_version["url"]), install_finished)
+            self.app.push_screen(ProgressModal(instance, mode='modloader'), install_finished)
 
         else:
             self.notify(f"Unknown installation mode '{self.install_mode}'", severity='error', timeout=5)
+            self.query_one('#install').loading = False
 
     def search_modpack(self):
         self.run_worker(self.open_modpack_selector(self.search.value), exclusive=True, name='modpack_search')
@@ -395,16 +382,16 @@ class NewInstanceScreen(Screen):
                 if version:
                     self.version_selector.label = version["version_number"]
                     self.selected_modpack_version = version
-                    self.modlist = [] # clear modlist when changing version
 
-        choices: list[list[str] | str] = [
-            [
-                v["version_number"],
-                ", ".join(v.get("game_versions", [])),
-                format_date(v["date_published"]),
-                v["id"]
+        choices: list[dict[str, str | list[str]]] = [
+            {
+                "version": v["version_number"],
+                "game_version": ", ".join(v.get("game_versions", [])),
+                "modloader": ", ".join(v.get("loaders", [])).title(),
+                "release_date": format_date(v["date_published"]),
+                "id": v["id"]
                 if v.get("date_published") else ""
-            ]
+            }
             for v in self.versions
         ]
         if choices:
@@ -412,11 +399,9 @@ class NewInstanceScreen(Screen):
                 SelectorModal(
                     "Choose Version",
                     choices,
-                    ['Version', 'Game Version', 'Release Date', "id"],
-                    width=60,
-                    height=16,
                     return_field='id',
-                    hide_return_field=True
+                    hide_return_field=True,
+                    filter_columns=['game_version', 'modloader']
                 ),
                 version_chosen
             )
@@ -439,16 +424,16 @@ class NewInstanceScreen(Screen):
                 self.mc_version_selector.label = result
                 self.selected_minecraft_version = next((version for version in mc_versions if version["id"] == result), {})
         mc_versions = get_minecraft_versions()
-        version_ids: list[list[str] | str] = []
+        version_ids: list[dict[str, list[str] | str]] = []
         for version in mc_versions:
             formatted_date = format_date(version["releaseTime"])
-            version_ids.append([version["id"], formatted_date])
+            version_ids.append({"version": version["id"], "release_date": formatted_date})
         if version_ids:
             self.app.push_screen(
                 SelectorModal(
                     "Choose Minecraft Version",
                     version_ids,
-                    ['Version', 'Release Date']
+                    show_filter=False
                 ),
                 mc_version_chosen
             )
@@ -464,56 +449,18 @@ class NewInstanceScreen(Screen):
                 self.modloader_version_selector.label = result
                 self.selected_modloader_version = result
         versions = list_fabric_versions(self.selected_minecraft_version["id"])
-        versions_list: list[list[str] | str] = [[v["version"], str(v["stable"])] for v in versions]
+        versions_list: list[dict[str, list[str] | str]] = [{"version": v["version"], "stable": str(v["stable"])} for v in versions]
         if versions_list:
             self.app.push_screen(
                 SelectorModal(
                     "Choose Modloader Version",
                     versions_list,
-                    ['Version', 'Stable']
+                    filter_columns=["stable"]
                 ),
                 modloader_version_chosen
             )
         else:
             self.notify("Could not load Modloader Versions.", severity='error', timeout=5)
-
-    async def show_modlist(self):
-        if not self.selected_modpack_version:
-            self.notify('Please select a Modpack first.', severity='information', timeout=5)
-            return
-        if self.modlist:
-            modlist = self.modlist
-        else:
-            modlist = await self.source_api.get_modlist(self.selected_modpack_version["dependencies"])
-        if modlist:
-            self.modlist = modlist
-            formatted_modlist = "\n".join(f"- {mod['name']} ({mod['version_number']})" for mod in modlist)
-            self.app.push_screen(TextDisplayModal("Modlist", formatted_modlist))
-        else:
-            self.notify('Could not load Modlist.', severity='information', timeout=5)
-        self.query_one('#modlist_button').loading = False
-
-class CustomSelect(Select):
-    BINDINGS = [
-        Binding(
-            "enter,space",
-            "show_overlay",
-            "Show menu",
-            show=False,
-        )
-    ]
-
-    def on_key(self, event):
-        """Override to prevent up/down from opening the menu."""
-        if event.key in ("up", "down") and not self.expanded:
-            # Let the default navigation work, but don’t trigger menu opening
-            screen = self.app.screen
-            if hasattr(screen, "action_focus_move"):
-                getattr(screen, "action_focus_move")(event.key)
-            event.stop()
-            return
-        # Fallback to normal Select behavior
-        return super()._on_key(event)
 
 class SmartInput(Input):
     def on_key(self, event):
