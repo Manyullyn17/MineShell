@@ -1,0 +1,19 @@
+Screen {
+    align: center middle;
+}
+
+#instances_list {
+    margin: 1 1;
+    height: 1fr;
+}
+
+#button-row {
+    padding: 1 0;
+    height: auto;
+    align-horizontal: right;
+}
+
+.instancebutton {
+    width: auto;
+    margin: 0 1 0 2;
+}

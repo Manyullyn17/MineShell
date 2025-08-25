@@ -1,0 +1,103 @@
+Screen {
+
+    align: center middle;
+}
+
+#new_instance_grid {
+    grid-size: 4 6;
+    grid-rows: 3 3 3 3 1fr 5;
+    grid-columns: 18 2fr 1fr 2fr;
+    grid-gutter: 1 1;
+    margin: 1 0 0 0;
+}
+
+.modloader {
+    display: none; # default hide
+}
+
+.modpack {
+    display: block; # default show
+}
+
+#spacer1 {
+    column-span: 2;
+}
+
+.input {
+    min-height: 3;
+}
+
+.button {
+    margin: 0 1;
+    width: 1fr;
+    height: 3;
+}
+
+# Modpack
+#spacer2 {
+    column-span: 1;
+}
+
+#spacer3 {
+    column-span: 1
+}
+
+#spacer4 {
+    column-span: 1
+}
+
+#description-label {
+    padding: 0 2;
+}
+
+#description_scroll {
+    column-span: 3;
+    padding: 0;
+    height: 1fr;
+    offset: -1 -1;
+}
+
+#description_box {
+    width: 1fr;
+    height: auto;
+}
+
+#author-label {
+    padding: 0 2;
+}
+
+#author_box {
+    padding: 0 1;
+}
+
+# Modloader
+#spacer5 {
+    column-span: 2;
+}
+
+#spacer6 {
+    column-span: 2;
+}
+
+#spacer7 {
+    column-span: 2;
+}
+
+#spacer8 {
+    column-span: 2;
+}
+
+# Buttons
+#button-row {
+    column-span: 4;
+}
+
+.newinstance.button {
+    width: auto;
+}
+
+.text {
+    width: auto;
+    text-align: left;
+    padding: 1 2;
+}

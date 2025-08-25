@@ -1,0 +1,38 @@
+Screen {
+    align: center middle;
+}
+
+#buttons {
+    width: auto;
+    padding: 1 0;
+    # content-align: left middle;
+}
+
+.mainbutton {
+    margin: 0 2 1 2;
+    width: 20;
+    content-align: left middle;
+    # outline: heavy green;
+}
+
+#instance-info {
+    height: 3;
+    content-align: center middle;
+    padding: 1 0;
+    # outline: heavy green;
+}
+
+#status-grid {
+    content-align: center middle;
+    grid-size: 2 2;
+    grid-gutter: 1;
+    grid-rows: 1;
+    grid-columns: 30;
+    width: 60;
+    height: 3;
+}
+
+.status {
+    width: 1fr;
+    content-align: center middle;
+}

@@ -1,0 +1,33 @@
+ModalScreen {
+    align: center middle;
+}
+
+#tdm-grid {
+    grid-size: 1 3;
+    grid-rows: 1 1fr 3;
+    grid-columns: 1fr;
+    padding: 0 1;
+    border: thick $background 80%;
+    background: $surface;
+}
+
+#tdm-title {
+    width: 1fr;
+    content-align: center middle;
+}
+
+#tdm-scroll {
+    border: round $accent;
+}
+
+#tdm-close {
+    margin: 0 1;
+    width: 1fr;
+    content-align: center middle;
+}
+
+#tdm-content {
+    padding: 0 1;
+    # height: auto;
+    # width: 1fr;
+}
