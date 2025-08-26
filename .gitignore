@@ -1,4 +1,7 @@
 installed_modpack/
+installed_modpack/*
 instances/
 **/__pycache__/
 *.pyc
+.venv/
+.venv/*
