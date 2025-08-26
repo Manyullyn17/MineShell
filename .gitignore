@@ -5,3 +5,6 @@ instances/
 *.pyc
 .venv/
 .venv/*
+downloads/
+installers/
+version_manifest_v2.json
