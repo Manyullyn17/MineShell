@@ -270,6 +270,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 # 2. Installing Modloader
 # 3. Finalizing Installation
 
+# TO-DO:
+# - update modloader install logic
 async def install_modloader(instance: InstanceConfig, steps: list[str], progress_bar_callback, step_callback, cancel_event: asyncio.Event, mc_version_url: str | None = None) -> tuple[int, str]:
     async def smooth_step_callback(step: str, label_id: int=1):
         step_callback(step, label_id)
@@ -290,7 +292,7 @@ async def install_modloader(instance: InstanceConfig, steps: list[str], progress
     await asyncio.sleep(0.1)
 
     await smooth_step_callback(f'Checking for {instance.modloader.capitalize()} installer')
-    # make modloader agnostic
+    # - make modloader agnostic
     installer_jar = await ensure_fabric_installer()
     progress_bar_callback(total=100, progress=100)
     progress_bar_callback(total=100, progress=33, bar_id=0)
@@ -311,7 +313,8 @@ async def install_modloader(instance: InstanceConfig, steps: list[str], progress
     await asyncio.sleep(0.1)
 
     # 3. Finalize Installation
-    instance.save() # what else even is there to do?
+    instance.save()
+    # - what else even is there to do?
 
     return 0, 'success'
 
@@ -321,7 +324,6 @@ async def async_extract_zip(zip_path: Path, extract_to: Path, progress_cb=None, 
 
 def _extract_zip_sync(zip_path: Path, extract_to: Path, progress_cb=None, item_cb=None, step=None, cancel_event=None):
     with zipfile.ZipFile(zip_path, 'r') as z:
-        # z.extractall(extract_to)
         members = z.namelist()
         total = len(members)
         for i, member in enumerate(members, start=1):
@@ -383,7 +385,8 @@ async def copytree_with_progress(
                 await copy2(src_file, dst_file)
             except Exception as e:
                 if step_cb:
-                    step_cb(f"Failed to copy {src_file}: {e}") # log errors somehow?
+                    # - log errors somehow?
+                    step_cb(f"Failed to copy {src_file}: {e}")
                 continue
 
             done += 1
@@ -395,7 +398,8 @@ async def get_modloader_version(source: str, extract_path: Path) -> str | None:
         case 'modrinth':
             with open(extract_path / 'modrinth.index.json', 'r') as f:
                 return next((version for key, version in json.load(f)["dependencies"].items() if key.lower() != "minecraft"), None)
-        case "curseforge": # if api has info, remove
+        # - if api has info, remove
+        case "curseforge":
             # CurseForge packs → manifest.json
             with (extract_path / "manifest.json").open("r", encoding="utf-8") as f:
                 manifest = json.load(f)

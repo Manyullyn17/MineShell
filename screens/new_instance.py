@@ -17,7 +17,7 @@ from backend.api.curseforge import CurseforgeAPI
 from backend.api.ftb import FTBAPI
 from backend.api.mojang import get_minecraft_versions
 from backend.api.fabric import list_fabric_versions
-from backend.storage.instance import InstanceConfig, ModList, ModEntry
+from backend.storage.instance import InstanceConfig
 from helpers import format_date, sanitize_filename, CustomSelect
 
 class NewInstanceScreen(Screen):
@@ -97,6 +97,8 @@ class NewInstanceScreen(Screen):
 
     selected_modpack_version: dict = {}
 
+    modlist: list[dict] = []
+
     selected_minecraft_version: dict = {}
 
     selected_modloader: Literal["fabric", "forge", "neoforge", "quilt"]
@@ -109,8 +111,7 @@ class NewInstanceScreen(Screen):
         with Grid(id='new_instance_grid'):
             # Source selector
             yield Static('Source:', classes='text')
-            # yield Select.from_values(['Modrinth', 'Curseforge', 'FTB', 'Modloader only'], allow_blank=False)
-            yield CustomSelect.from_values(list(self.sources.keys()), allow_blank=False, id='source_select') # override arrow keys for movement instead of opening selector
+            yield CustomSelect.from_values(list(self.sources.keys()), allow_blank=False, id='source_select')
 
             yield Static(id='spacer1')
             
@@ -201,6 +202,9 @@ class NewInstanceScreen(Screen):
                 self.select_mc_version()
             case 'modloader_version_selector':
                 self.select_modloader_version()
+            case 'modlist_button':
+                self.query_one('#modlist_button').loading = True
+                self.run_worker(self.show_modlist(), exclusive=True, name='modlist_load')
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         match event.input.id:
@@ -210,7 +214,8 @@ class NewInstanceScreen(Screen):
                 return
 
     async def open_modpack_selector(self, query: str):
-        title, data = await self.source_api.search_modpacks(query, limit=20) # get limit from settings, add way to load more
+        # - get limit from settings, add way to load more
+        title, data = await self.source_api.search_modpacks(query, limit=20)
 
         async def modpack_selected(result: str | None) -> None:
             if result:
@@ -224,6 +229,7 @@ class NewInstanceScreen(Screen):
                     self.author.update(str(selected_pack["author"]))
                     self.version_selector.label = self.versions[0]["version_number"]
                     self.selected_modpack_version = self.versions[0]
+                    self.modlist = [] # clear modlist when changing modpack
             self.query_one('#search_button').loading = False
 
 
@@ -255,7 +261,8 @@ class NewInstanceScreen(Screen):
             next_widget.focus()
 
     @on(Select.Changed)
-    def select_changed(self, event: Select.Changed) -> None: # clear modpack on source change?
+    def select_changed(self, event: Select.Changed) -> None:
+        # - clear modpack on source change?
         match event.select.id:
             case 'source_select':
                 self.title = str(event.value)
@@ -343,7 +350,7 @@ class NewInstanceScreen(Screen):
                 path=instance_path,
             )
 
-            self.app.push_screen(ProgressModal(instance, version["dependencies"], mode='modpack'), install_finished)
+            self.app.push_screen(ProgressModal(instance, version["dependencies"], self.modlist, mode='modpack'), install_finished)
 
         # Modloader only install logic
         elif self.install_mode == 'modloader':
@@ -362,7 +369,7 @@ class NewInstanceScreen(Screen):
                 path=instance_path,
             )
 
-            self.app.push_screen(ProgressModal(instance, mode='modloader'), install_finished)
+            self.app.push_screen(ProgressModal(instance, mode='modloader', mc_version_url=self.selected_minecraft_version["url"]), install_finished)
 
         else:
             self.notify(f"Unknown installation mode '{self.install_mode}'", severity='error', timeout=5)
@@ -382,6 +389,7 @@ class NewInstanceScreen(Screen):
                 if version:
                     self.version_selector.label = version["version_number"]
                     self.selected_modpack_version = version
+                    self.modlist = [] # clear modlist when changing version
 
         choices: list[dict[str, str | list[str]]] = [
             {
@@ -461,6 +469,22 @@ class NewInstanceScreen(Screen):
             )
         else:
             self.notify("Could not load Modloader Versions.", severity='error', timeout=5)
+
+    async def show_modlist(self):
+        if not self.selected_modpack_version:
+            self.notify('Please select a Modpack first.', severity='information', timeout=5)
+            return
+        if self.modlist:
+            modlist = self.modlist
+        else:
+            modlist = await self.source_api.get_modlist(self.selected_modpack_version["dependencies"])
+        if modlist:
+            self.modlist = modlist
+            formatted_modlist = "\n".join(f"- {mod['name']} ({mod['version_number']})" for mod in modlist)
+            self.app.push_screen(TextDisplayModal("Modlist", formatted_modlist))
+        else:
+            self.notify('Could not load Modlist.', severity='information', timeout=5)
+        self.query_one('#modlist_button').loading = False
 
 class SmartInput(Input):
     def on_key(self, event):

@@ -33,6 +33,6 @@ if __name__ == '__main__':
     MineShellApp().run()
 
 
-# To-Do:
+# TO-DO:
 # - make naming make sense and consistent
 

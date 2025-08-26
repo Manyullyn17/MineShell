@@ -27,17 +27,14 @@ class ModrinthAPI(SourceAPI):
         rows = []
         for hit in results:
             rows.append({
-                "name": hit["title"],             # name to show
+                "name": hit["title"], # name to show
                 "author": hit["author"],
-                "downloads": f"{hit['downloads']:,}",  # format downloads with commas
+                "downloads": f"{hit['downloads']:,}", # format downloads with commas
                 "modloader": await self.get_modloader_from_categories(hit["categories"]),
                 "categories": await self.get_only_categories_from_categories(hit["categories"]),
                 "slug": hit["slug"],
                 "description": hit["description"],
             })
-
-        # Define columns
-        #columns = ["Name", "Author", "Downloads", "Modloader", "Categories", "Slug", "Description"] # refactor data to be dict, lotta work
 
         # Return data for the modal
         return f"Select Modpack (Search: {query})", rows
@@ -48,7 +45,7 @@ class ModrinthAPI(SourceAPI):
             cat_lower = cat.lower()
             if cat_lower in MODLOADERS:
                 # Capitalize nicely for display
-                loaders.append(cat_lower.capitalize())
+                loaders.append(cat_lower.title())
         return loaders
     
     async def get_only_categories_from_categories(self, categories: list[str]) -> list[str]:
@@ -57,7 +54,7 @@ class ModrinthAPI(SourceAPI):
             cat_lower = cat.lower()
             if cat_lower not in MODLOADERS:
                 # Capitalize nicely for display
-                categories_list.append(cat_lower.capitalize())
+                categories_list.append(cat_lower.title())
         return categories_list
 
     async def get_modpack_versions(self, modpack_id: str) -> list[dict]:
@@ -77,58 +74,7 @@ class ModrinthAPI(SourceAPI):
         # Build simplified list
         return versions
     
-async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
-    """
-    Fetch project info for a list of project IDs from Modrinth.
-
-    Args:
-        project_ids: List of project_id strings
-
-    Returns:
-        Dictionary mapping project_id -> project JSON object
-    """
-    if not project_ids:
-        return {}
-
-    url = f"{MODRINTH_API}/projects?ids={json.dumps(project_ids)}"
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(url, headers=HEADERS)
-        resp.raise_for_status()
-        projects_list = resp.json()
-
-    # Filter server-side mods
-    server_projects = {
-        proj["id"]: proj
-        for proj in projects_list
-        if proj.get("server_side") in ("required", "optional")
-    }
-
-    return server_projects
-    
-async def fetch_versions(version_ids: list[str]) -> list[dict]:
-    """
-    Fetch version info for a list of version IDs from Modrinth.
-
-    Args:
-        version_ids: List of version_id strings
-
-    Returns:
-        Dictionary mapping version_id -> version JSON object
-    """
-    if not version_ids:
-        return []
-
-    url = f"{MODRINTH_API}/versions?ids={json.dumps(version_ids)}"
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(url, headers=HEADERS)
-        resp.raise_for_status()
-        versions_list = resp.json()
-
-    return versions_list
-
-async def get_modlist(self, dependencies: dict) -> list[dict]:
+    async def get_modlist(self, dependencies: dict) -> list[dict]:
         """
         Given a Modrinth modpack version object, fetch and return a list of server-side mods.
 
@@ -179,3 +125,55 @@ async def get_modlist(self, dependencies: dict) -> list[dict]:
             })
 
         return modlist
+
+async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
+    """
+    Fetch project info for a list of project IDs from Modrinth.
+
+    Args:
+        project_ids: List of project_id strings
+
+    Returns:
+        Dictionary mapping project_id -> project JSON object
+    """
+    if not project_ids:
+        return {}
+
+    url = f"{MODRINTH_API}/projects?ids={json.dumps(project_ids)}"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(url, headers=HEADERS)
+        resp.raise_for_status()
+        projects_list = resp.json()
+
+    # Filter server-side mods
+    server_projects = {
+        proj["id"]: proj
+        for proj in projects_list
+        # - maybe also "unknown"?
+        if proj.get("server_side") in ("required", "optional")
+    }
+
+    return server_projects
+    
+async def fetch_versions(version_ids: list[str]) -> list[dict]:
+    """
+    Fetch version info for a list of version IDs from Modrinth.
+
+    Args:
+        version_ids: List of version_id strings
+
+    Returns:
+        Dictionary mapping version_id -> version JSON object
+    """
+    if not version_ids:
+        return []
+
+    url = f"{MODRINTH_API}/versions?ids={json.dumps(version_ids)}"
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(url, headers=HEADERS)
+        resp.raise_for_status()
+        versions_list = resp.json()
+
+    return versions_list

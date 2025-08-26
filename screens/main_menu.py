@@ -65,7 +65,8 @@ class MainMenu(Screen):
 
     def on_mount(self) -> None:
         self.title = 'Mineshell'
-        self.update_instance_info('Server', True) # get name and status dynamically
+        # - get name and status dynamically
+        self.update_instance_info('Server', True)
         self.status_interval = self.set_interval(10, self.update_status)
         self.call_later(self.update_status)
 
@@ -108,7 +109,7 @@ class MainMenu(Screen):
         self.instance_info.update(f'Default Instance: {self.instance_name} ({self.instance_status})')
 
     async def update_status(self):
-        # add method of getting info
+        # - add method of getting info
         self.players = '2/4'
         self.uptime = '00:21:17'
         self.cpu = '15%'

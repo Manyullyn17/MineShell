@@ -21,7 +21,6 @@ class FilterModal(ModalScreen[dict]):
 
     def __init__(self, choices: list[dict[str, str | list[str]]], filter_columns: list[str] | None = None):
         super().__init__()
-        # Normalize choices: make sure every item is a list
         self.choices = choices
         self.column_names = list(choices[0])
         self.filter_columns = filter_columns if filter_columns else self.column_names
@@ -55,16 +54,6 @@ class FilterModal(ModalScreen[dict]):
             })
             for key in self.filter_columns
         }
-
-        # for row in self.choices:
-        #     for col, value in zip(self.columns, row):
-        #         if isinstance(value, list):
-        #             for item in value:
-        #                 unique_values[col].add(item)
-        #             continue
-        #         unique_values[col].add(value)
-
-        # unique_values = {col: list(values) for col, values in unique_values.items()}
 
         def sort_key(v: str):
             if v.replace(".", "").isdigit():  # crude check for version numbers

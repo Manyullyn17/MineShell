@@ -18,7 +18,6 @@ class SelectorModal(ModalScreen[str]):
         super().__init__()
         self.title_txt = title
         self.subtitle_txt = 'f to filter, r to reset' if show_filter else ''
-        # Normalize choices: make sure every item is a list
         self.choices = choices
         self.return_field: str = return_field if return_field else next(iter(choices[0]))
         self.hide_return_field = hide_return_field
@@ -38,13 +37,6 @@ class SelectorModal(ModalScreen[str]):
                 self.table.add_column(column.replace('_', ' ').title(), width=0)
             else:
                 self.table.add_column(column.replace('_', ' ').title())
-
-        # for i in range(self.max_columns):
-        #     col_name = self.columns[i] if i < len(self.columns) else ''
-        #     if self.hide_return_field and i == self.return_index:
-        #         self.table.add_column(col_name, width=0)
-        #     else:
-        #         self.table.add_column(col_name)
 
         # Add rows
         self.load_table(self.choices)

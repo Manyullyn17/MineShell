@@ -85,6 +85,7 @@ class InstanceConfig(BaseModel):
     java_version: Optional[str] = None
     memory_min: Optional[int] = None
     memory_max: Optional[int] = None
+    # - change so it's per setting
     overwrite_global_settings: bool = False
     mods: ModList = ModList()
     # Optional per-instance settings overriding global config
