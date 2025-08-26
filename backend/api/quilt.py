@@ -42,19 +42,20 @@ async def ensure_quilt_installer(installers_dir: str = "installers") -> Path:
     await download_file(latest["url"], dest)
     return dest
 
-async def run_quilt_installer( # install location wrong
+async def run_quilt_installer( # install location wrong, hopefully not anymore
     install_dir: Path,
     installer_path: Path,
     mc_version: str,
-    loader_version: Optional[str] = None
+    loader_version: str=''
 ):
     """Run Quilt installer."""
     cmd = [
         "java", "-jar", installer_path,
         "install", "server",
-        mc_version,
-        # "--install-dir", install_dir, # not supported? always installs to ./server
+        mc_version, loader_version,
+        f"--install-dir={install_dir}", # experimental
         "--download-server"
+        # --create-scripts # creates launch scripts, maybe also on fabric?
     ]
     
     # if loader_version: # not supported?

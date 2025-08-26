@@ -9,7 +9,7 @@ ModalScreen {
     grid-columns: 15 1fr;
     padding: 0 2;
     width: 60;
-    height: 11;
+    height: 12;
     border: thick $background 80%;
     background: $surface;
 }
@@ -21,6 +21,9 @@ ModalScreen {
 
 #ftp-link {
     column-span: 2;
+    width: 1fr;
+    padding: 0 17 0 17;
+    content-align-horizontal: center;
 }
 
 #folder-button-container {

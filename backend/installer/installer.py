@@ -72,9 +72,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
     progress_bar_callback(total=100, progress=25, step=3)
 
     await smooth_step_callback(f'Checking for {instance.modloader.capitalize()} installer')
-    # make modloader agnostic
     installer_jar = await get_server_installer(instance)
-    # installer_jar = await ensure_fabric_installer()
     progress_bar_callback(total=100, progress=50, step=3)
 
     if cancel_event.is_set():
@@ -82,9 +80,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     await smooth_step_callback(f'Running {instance.modloader.capitalize()} installer')
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
-    # result = await run_fabric_installer(Path("instances") / instance.instance_id, installer_jar, mc_version, loader_version)
-    if result != 0:
-        return 3, str(result)
+    # if result != 0:
+    #     return 3, str(result)
     progress_bar_callback(total=100, progress=100, step=3)
     await asyncio.sleep(0.1)
 

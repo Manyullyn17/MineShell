@@ -23,14 +23,14 @@ deepslate_theme = Theme(
     },
 )
 
-class MineShellApp(App):
+class MineShell(App):
     def on_mount(self) -> None:
         self.register_theme(deepslate_theme)
         self.theme = 'deepslate'
         self.push_screen(MainMenu())
 
 if __name__ == '__main__':
-    MineShellApp().run()
+    MineShell().run()
 
 
 # TO-DO:

@@ -210,3 +210,9 @@ class InstanceRegistry(BaseModel):
         self.instances = [i for i in self.instances if i.instance_id != instance_id]
         self.last_updated = datetime.now()
 
+    def get_instance(self, instance_id: str) -> InstanceConfig | None:
+        instance_summary = next((instance for instance in self.instances if instance.instance_id == instance_id), None)
+        if instance_summary and instance_summary.path:
+            return InstanceConfig.load(instance_summary.path)
+        return None
+    

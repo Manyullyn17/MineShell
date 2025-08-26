@@ -30,7 +30,9 @@ class ManageInstancesScreen(Screen):
             "back":             {"left":"new_instance",     "up": "instances_list", "down": "instances_list",   "right": "instances_list"},
     }
 
-    selected_instance: str | None = None
+    selected_instance: str | None = None # instance_id
+
+    registry: InstanceRegistry
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -45,9 +47,9 @@ class ManageInstancesScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.title = 'Mineshell'
         self.sub_title = 'Manage Instances'
         self.table.loading = True
+        self.registry = InstanceRegistry.load()
 
     def _on_screen_resume(self) -> None:
         self.load_table()
@@ -65,15 +67,12 @@ class ManageInstancesScreen(Screen):
         # Add hidden datetime column for sorting
         self.table.add_column('datetime', width=0)
 
-        # Load registry
-        registry = InstanceRegistry.load()
-
         # If registry is empty, just show an empty table
-        if not registry.instances:
+        if not self.registry.instances:
             self.table.loading = False
 
         # Populate rows
-        for instance in registry.instances:
+        for instance in self.registry.instances:
             row = [
                 instance.name or '',
                 instance.status.capitalize() if instance.status else '',
@@ -99,7 +98,9 @@ class ManageInstancesScreen(Screen):
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_instance = str(event.row_key.value)
-        self.app.push_screen(InstanceDetailScreen(instance_name=selected_instance))
+        instance = self.registry.get_instance(selected_instance)
+        if instance:
+            self.app.push_screen(InstanceDetailScreen(instance))
 
     def action_back(self):
         self.app.pop_screen()
@@ -107,21 +108,14 @@ class ManageInstancesScreen(Screen):
     def action_new_instance(self):
         def check_delete(delete: bool | None) -> None:
             if delete:
-                print('delete') # implement
+                self.delete_instance()
 
         self.app.push_screen(NewInstanceScreen(), check_delete)
 
     def action_delete(self):
         def check_delete(delete: bool | None) -> None:
             if delete and self.selected_instance:
-                registry = InstanceRegistry.load()
-                registry.remove_instance(self.selected_instance)
-                try:
-                    rmtree(Path('instances') / self.selected_instance)
-                except:
-                    self.notify('Could not delete instance files.', severity='error', timeout=5)
-                registry.save()
-                self.load_table()
+                self.delete_instance()
         if not self.selected_instance:
             return
         self.app.push_screen(DeleteModal(), check_delete)
@@ -130,8 +124,21 @@ class ManageInstancesScreen(Screen):
         focused = self.focused
         if not focused or not focused.id:
             return
-        next_id = self.navigation_map.get(focused.id, {}).get(direction)
-        if next_id:
-            next_widget = self.query_one(f'#{next_id}')
-            next_widget.focus()
+        try:
+            next_id = self.navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
+    def delete_instance(self):
+        if self.selected_instance:
+            self.registry.remove_instance(self.selected_instance)
+            try:
+                rmtree(Path('instances') / self.selected_instance)
+            except:
+                self.notify('Could not delete instance files.', severity='error', timeout=5)
+                return
+            self.registry.save()
+            self.load_table()

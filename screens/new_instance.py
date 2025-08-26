@@ -182,7 +182,6 @@ class NewInstanceScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.title = 'Mineshell'
         self.sub_title = 'New Instance'
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -255,10 +254,13 @@ class NewInstanceScreen(Screen):
         focused = self.focused
         if not focused or not focused.id:
             return
-        next_id = navigation_map.get(focused.id, {}).get(direction)
-        if next_id:
-            next_widget = self.query_one(f'#{next_id}')
-            next_widget.focus()
+        try:
+            next_id = navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     @on(Select.Changed)
     def select_changed(self, event: Select.Changed) -> None:
@@ -456,6 +458,7 @@ class NewInstanceScreen(Screen):
             if result:
                 self.modloader_version_selector.label = result
                 self.selected_modloader_version = result
+        # - make modloader agnostic xD
         versions = list_fabric_versions(self.selected_minecraft_version["id"])
         versions_list: list[dict[str, list[str] | str]] = [{"version": v["version"], "stable": str(v["stable"])} for v in versions]
         if versions_list:

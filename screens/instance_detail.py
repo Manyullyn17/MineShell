@@ -1,9 +1,12 @@
+from shutil import rmtree
 from textual.app import ComposeResult
 from textual.widgets import Button, Footer, Header, Static
 from textual.screen import Screen
 from textual.containers import Grid
 from textual.binding import Binding
+from backend.storage.instance import InstanceRegistry, InstanceConfig
 from screens.folder_modal import FolderModal
+from screens.mod_list import ModListScreen
 
 class InstanceDetailScreen(Screen):
     CSS_PATH = 'styles/instance_detail_screen.tcss'
@@ -31,9 +34,9 @@ class InstanceDetailScreen(Screen):
         "back":         {"left":"delete",       "up": "settings",   "down": "settings",     "right": "configs"},
     }
 
-    def __init__(self, instance_name: str) -> None:
+    def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
-        self.instance_name = instance_name
+        self.instance = instance
 
     def compose(self) -> ComposeResult:
         self.running = ''
@@ -81,8 +84,7 @@ class InstanceDetailScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.title = 'Mineshell'
-        self.sub_title = self.instance_name
+        self.sub_title = self.instance.name
         self.status_interval = self.set_interval(10, self.update_status)
         self.call_later(self.update_status)
 
@@ -106,7 +108,8 @@ class InstanceDetailScreen(Screen):
                 print('restart') # send stop command, then start command
             case 'console':
                 print('console') # open console screen
-            case 'modlist':
+            case 'modlist': # next project
+                self.app.push_screen(ModListScreen(self.instance))
                 print('modlist') # open modlist screen
             case 'settings':
                 print('settings') # open settings screen
@@ -115,9 +118,13 @@ class InstanceDetailScreen(Screen):
             case 'backups':
                 print('backups') # open backups screen
             case 'folder':
-                self.app.push_screen(FolderModal('test instance', 'home/manyullyn/mineshell/\ninstances/test_instance', 'sftp://manyullyn@192.168.0.200/home/manyullyn/mineshell/instances/test_instance/')) # placeholder values
+                # - add way of getting from settings or dynamically
+                user = 'manyullyn'
+                ip = '192.168.0.200'
+                instance_path = self.instance.path.resolve()
+                self.app.push_screen(FolderModal(self.instance.name, str(instance_path), f'sftp://{user}@{ip}/{instance_path.as_posix()}'))
             case 'delete':
-                print('delete') # delete instance
+                self.delete_instance()
             case 'back':
                 self.app.pop_screen()
             
@@ -134,13 +141,16 @@ class InstanceDetailScreen(Screen):
         focused = self.focused
         if not focused or not focused.id:
             return
-        next_id = self.navigation_map.get(focused.id, {}).get(direction)
-        if next_id:
-            next_widget = self.query_one(f'#{next_id}')
-            next_widget.focus()
+        try:
+            next_id = self.navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     async def update_status(self):
-        # actually get status dynamically
+        # - actually get status dynamically
         self.running = 'Running'
         self.uptime = '00:02:34'
         self.cpu = '15%'
@@ -155,3 +165,13 @@ class InstanceDetailScreen(Screen):
         self.status_players.update(f'Players: {self.players}')
         self.status_ram.update(f'RAM: {self.ram}')
 
+    def delete_instance(self):
+        registry = InstanceRegistry.load()
+        registry.remove_instance(self.instance.instance_id)
+        try:
+            rmtree(self.instance.path)
+        except:
+            self.notify('Could not delete instance files.', severity='error', timeout=5)
+            return
+        registry.save()
+        self.app.pop_screen()

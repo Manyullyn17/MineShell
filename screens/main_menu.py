@@ -64,7 +64,6 @@ class MainMenu(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.title = 'Mineshell'
         # - get name and status dynamically
         self.update_instance_info('Server', True)
         self.status_interval = self.set_interval(10, self.update_status)
@@ -87,16 +86,21 @@ class MainMenu(Screen):
             case 'manage_instances':
                 self.app.push_screen(ManageInstancesScreen())
             case 'open_instance':
-                self.app.push_screen(InstanceDetailScreen(instance_name='Placeholder'))
+                return
+                # placeholder until setting and getting default instance is implemented
+                # self.app.push_screen(InstanceDetailScreen(instance_name='Placeholder'))
 
     def action_focus_move(self, direction: str):
         focused = self.focused
         if not focused or not focused.id:
             return
-        next_id = self.navigation_map.get(focused.id, {}).get(direction)
-        if next_id:
-            next_widget = self.query_one(f'#{next_id}')
-            next_widget.focus()
+        try:
+            next_id = self.navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def update_instance_info(self, instance_name: str, running: bool, stopping: bool=False):
         self.instance_name = instance_name

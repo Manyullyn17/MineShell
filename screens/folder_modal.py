@@ -30,7 +30,7 @@ class FolderModal(ModalScreen):
             Label(f"{self.instance_name}", id="instance-name", classes='folder label'),
             Static("Folder Path:", classes='folder static'),
             Label(f"{self.folder_path}", id="folder-path", classes='folder label'),
-            Link("Open Folder via FTP", url=self.ftp_link, id="ftp-link", classes='folder link'),
+            Link("Open Folder via SFTP", url=self.ftp_link, id="ftp-link", classes='folder link'),
             Container(Button("Back", id="back", classes='folder button'), id='folder-button-container'),
             id='dialog'
         )
@@ -43,7 +43,10 @@ class FolderModal(ModalScreen):
         focused = self.focused
         if not focused or not focused.id:
             return
-        next_id = self.navigation_map.get(focused.id, {}).get(direction)
-        if next_id:
-            next_widget = self.query_one(f'#{next_id}')
-            next_widget.focus()
+        try:
+            next_id = self.navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)

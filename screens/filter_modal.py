@@ -111,10 +111,13 @@ class FilterModal(ModalScreen[dict]):
         focused = self.focused
         if not focused or not focused.id:
             return
-        next_id = self.navigation_map.get(focused.id, {}).get(direction)
-        if next_id:
-            next_widget = self.query_one(f'#{next_id}')
-            next_widget.focus()
+        try:
+            next_id = self.navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def action_back(self):
         self.dismiss()
