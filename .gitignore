@@ -8,3 +8,4 @@ instances/
 downloads/
 installers/
 version_manifest_v2.json
+.vscode/launch.json

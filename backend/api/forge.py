@@ -1,5 +1,6 @@
 import httpx, subprocess, os
 from pathlib import Path
+from aioshutil import rmtree
 from backend.api.mojang import download_minecraft_server
 from helpers import download_file
 
@@ -41,6 +42,8 @@ async def run_forge_installer(install_dir: Path, installer_path: Path, mc_versio
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         await download_minecraft_server(mc_version_url, install_dir)
+        log_file = installer_path.name
+        await rmtree(log_file, ignore_errors=True) # remove log file
         return result.returncode
     except subprocess.CalledProcessError as e:
         return e

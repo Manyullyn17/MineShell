@@ -80,8 +80,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     await smooth_step_callback(f'Running {instance.modloader.capitalize()} installer')
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
-    # if result != 0:
-    #     return 3, str(result)
+    if result != 0:
+        return 3, str(result)
     progress_bar_callback(total=100, progress=100, step=3)
     await asyncio.sleep(0.1)
 
@@ -430,4 +430,4 @@ async def install_server(install_dir: Path, installer_path: Path, modloader: str
                 return -1
             return await run_neoforge_installer(install_dir, installer_path, mc_version_url)
         case 'quilt':
-            return await run_quilt_installer(install_dir, installer_path, mc_version, loader_version)
+            return await run_quilt_installer(install_dir, installer_path, mc_version, str(loader_version))

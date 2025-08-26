@@ -67,6 +67,8 @@ class ManageInstancesScreen(Screen):
         # Add hidden datetime column for sorting
         self.table.add_column('datetime', width=0)
 
+        self.registry = InstanceRegistry.load() # reload registry
+
         # If registry is empty, just show an empty table
         if not self.registry.instances:
             self.table.loading = False
@@ -133,6 +135,7 @@ class ManageInstancesScreen(Screen):
             self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def delete_instance(self):
+        self.registry = InstanceRegistry.load()
         if self.selected_instance:
             self.registry.remove_instance(self.selected_instance)
             try:

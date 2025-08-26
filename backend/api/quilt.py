@@ -54,12 +54,9 @@ async def run_quilt_installer( # install location wrong, hopefully not anymore
         "install", "server",
         mc_version, loader_version,
         f"--install-dir={install_dir}", # experimental
-        "--download-server"
-        # --create-scripts # creates launch scripts, maybe also on fabric?
+        "--download-server",
+        "--create-scripts" # creates launch scripts, maybe also on fabric?
     ]
-    
-    # if loader_version: # not supported?
-    #     cmd += ["--loader", loader_version]
     
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
