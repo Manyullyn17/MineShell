@@ -71,14 +71,14 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
     instance_path.mkdir(parents=True, exist_ok=True)
     progress_bar_callback(total=100, progress=25, step=3)
 
-    await smooth_step_callback(f'Checking for {instance.modloader.capitalize()} installer')
+    await smooth_step_callback(f'Checking for {instance.formatted_modloader()} installer')
     installer_jar = await get_server_installer(instance)
     progress_bar_callback(total=100, progress=50, step=3)
 
     if cancel_event.is_set():
         return -1, 'cancelled'
 
-    await smooth_step_callback(f'Running {instance.modloader.capitalize()} installer')
+    await smooth_step_callback(f'Running {instance.formatted_modloader()} installer')
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
     if result != 0:
         return 3, str(result)
@@ -288,9 +288,9 @@ async def install_modloader(instance: InstanceConfig, steps: list[str], progress
     progress_bar_callback(total=100, progress=50)
     await asyncio.sleep(0.1)
 
-    await smooth_step_callback(f'Checking for {instance.modloader.capitalize()} installer')
-    # - make modloader agnostic
-    installer_jar = await ensure_fabric_installer()
+    await smooth_step_callback(f'Checking for {instance.formatted_modloader()} installer')
+    # - untested, should work
+    installer_jar = await get_server_installer(instance)
     progress_bar_callback(total=100, progress=100)
     progress_bar_callback(total=100, progress=33, bar_id=0)
     await asyncio.sleep(0.1)
@@ -300,8 +300,9 @@ async def install_modloader(instance: InstanceConfig, steps: list[str], progress
 
     # 2. Install Modloader
     step_callback(steps[1], 0)
-    await smooth_step_callback(f'Running {instance.modloader.capitalize()} installer')
-    result = await run_fabric_installer(Path("instances") / instance.instance_id, installer_jar, mc_version, loader_version)
+    await smooth_step_callback(f'Running {instance.formatted_modloader()} installer')
+    # - untested, should work
+    result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
 
     if result != 0:
         return 2, str(result)

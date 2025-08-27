@@ -1,12 +1,13 @@
 from textual.app import ComposeResult
-from textual.widgets import Button, Static, Footer, Header
+from textual.widgets import Button, Static, Footer, Header, Label, DataTable
 from textual.screen import Screen
-from textual.containers import Grid, Center
+from textual.containers import Vertical, Horizontal
 from textual.binding import Binding
 from backend.storage.instance import InstanceConfig, ModList
+from helpers import SmartInput
 
 class ModListScreen(Screen):
-    CSS_PATH = 'styles/main_screen.tcss'
+    CSS_PATH = 'styles/mod_list_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
         Binding('up', "focus_move('up')", show=False),
@@ -31,13 +32,32 @@ class ModListScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
-        with Grid():
-            yield Static()
+        with Vertical():
+            with Horizontal(id='modlist-info'):
+                if self.instance.modpack_name:
+                    yield Static(f'Modpack: {self.instance.modpack_name}', classes='modlist info')
+                if self.instance.modpack_version:
+                    yield Static(f'Version: {self.instance.modpack_version}', classes='modlist info')
+                yield Static(f'Modloader: {self.instance.formatted_modloader()}', classes='modlist info') 
+                if not self.instance.modpack_id:
+                    yield Static(f'Modloader Version: {self.instance.modloader_version}', classes='modlist info')
+                self.mod_count = Label(f'Mods: {len(self.modlist.mods)}', id='modlist-mod-count', classes='modlist info')
+                yield self.mod_count
+                # how does reactivity work? can i just update the number and it updates somehow?
+
+            with Horizontal(id='modlist-buttons'):
+                yield SmartInput(placeholder='Search Modlist', classes='modlist search')
+                yield Button('Filter', id='modlist-filter-button', classes='modlist button')
+                yield Button('Update', id='modlist-update-button', classes='modlist button')
+                yield Button('Add Mods', id='modlist-add-mod-button', classes='modlist button')
+
+            self.table = DataTable(classes='modlist table')
+            yield self.table
 
         yield Footer()
 
     def on_mount(self) -> None:
-        self.sub_title = self.instance.name
+        self.sub_title = self.instance.name + ' - Modlist'
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:

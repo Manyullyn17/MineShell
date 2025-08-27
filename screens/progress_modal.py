@@ -25,7 +25,7 @@ class ProgressModal(ModalScreen):
         self.steps = [
             '1. Downloading Modpack',
             '2. Extracting Modpack',
-            f'3. Installing {instance.modloader.capitalize()} Modloader',
+            f'3. Installing {instance.formatted_modloader()} Modloader',
             '4. Copying Overrides',
             '5. Getting Modlist',
             '6. Downloading Mods',

@@ -2,7 +2,7 @@ import unicodedata, re, httpx, aiofiles
 from datetime import datetime
 from pathlib import Path
 from config import DATE_FORMAT
-from textual.widgets import Select
+from textual.widgets import Select, Input
 from textual.binding import Binding
 
 def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
@@ -60,4 +60,24 @@ class CustomSelect(Select):
             event.stop()
             return
         # Fallback to normal Select behavior
+        return super()._on_key(event)
+
+class SmartInput(Input):
+    def on_key(self, event):
+        if event.key in ("left", "right"):
+            # Determine if we should move focus
+            move_focus = (
+                (event.key == "left" and self.cursor_at_start) or
+                (event.key == "right" and self.cursor_at_end)
+            )
+
+            if move_focus:
+                # Call the screen's focus movement
+                screen = self.app.screen
+                if hasattr(screen, "action_focus_move"):
+                    getattr(screen, "action_focus_move")(event.key)
+                event.stop()
+                return
+
+        # fallback to normal Input behavior
         return super()._on_key(event)

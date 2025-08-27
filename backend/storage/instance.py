@@ -95,6 +95,18 @@ class InstanceConfig(BaseModel):
     notes: Optional[str] = None            # extra notes about instance
     path: Path
 
+    MODLOADER_DISPLAY: ClassVar = {
+        "fabric": "Fabric",
+        "forge": "Forge",
+        "quilt": "Quilt",
+        "neoforge": "NeoForge"
+    }
+
+    def formatted_modloader(self) -> str:
+        if not self.modloader:
+            return ''
+        return self.MODLOADER_DISPLAY.get(self.modloader, self.modloader.capitalize())
+
     # ----------------------------
     # Save/load methods
     # ----------------------------

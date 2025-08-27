@@ -18,7 +18,7 @@ from backend.api.ftb import FTBAPI
 from backend.api.mojang import get_minecraft_versions
 from backend.api.fabric import list_fabric_versions
 from backend.storage.instance import InstanceConfig
-from helpers import format_date, sanitize_filename, CustomSelect
+from helpers import format_date, sanitize_filename, CustomSelect, SmartInput
 
 class NewInstanceScreen(Screen):
     CSS_PATH = 'styles/new_instance_screen.tcss'
@@ -489,22 +489,3 @@ class NewInstanceScreen(Screen):
             self.notify('Could not load Modlist.', severity='information', timeout=5)
         self.query_one('#modlist_button').loading = False
 
-class SmartInput(Input):
-    def on_key(self, event):
-        if event.key in ("left", "right"):
-            # Determine if we should move focus
-            move_focus = (
-                (event.key == "left" and self.cursor_at_start) or
-                (event.key == "right" and self.cursor_at_end)
-            )
-
-            if move_focus:
-                # Call the screen's focus movement
-                screen = self.app.screen
-                if hasattr(screen, "action_focus_move"):
-                    getattr(screen, "action_focus_move")(event.key)
-                event.stop()
-                return
-
-        # fallback to normal Input behavior
-        return super()._on_key(event)

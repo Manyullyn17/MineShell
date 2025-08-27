@@ -1,0 +1,30 @@
+#modlist-info {
+    height: 3;
+}
+
+.modlist.info {
+    content-align: center middle;
+    width: 1fr;
+    height: 1fr;
+}
+
+#modlist-buttons {
+    height: 4;
+}
+
+.modlist.search {
+    margin: 0 1;
+    width: 2fr;
+}
+
+.modlist.button {
+    margin: 0 1;
+    width: 1fr;
+    min-width: 20;
+}
+
+.modlist.table {
+    width: 1fr;
+    height: 1fr;
+    margin: 0 1 1 1;
+}

@@ -42,7 +42,7 @@ async def ensure_quilt_installer(installers_dir: str = "installers") -> Path:
     await download_file(latest["url"], dest)
     return dest
 
-async def run_quilt_installer( # install location wrong, hopefully not anymore
+async def run_quilt_installer(
     install_dir: Path,
     installer_path: Path,
     mc_version: str,
@@ -53,9 +53,9 @@ async def run_quilt_installer( # install location wrong, hopefully not anymore
         "java", "-jar", installer_path,
         "install", "server",
         mc_version, loader_version,
-        f"--install-dir={install_dir}", # experimental
+        f"--install-dir={install_dir}",
         "--download-server",
-        "--create-scripts" # creates launch scripts, maybe also on fabric?
+        "--create-scripts" # creates launch scripts, doesn't seem to do anything though
     ]
     
     try:
