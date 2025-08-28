@@ -1,11 +1,16 @@
 #modlist-info {
     height: 3;
+    padding: 0 2 0 2;
 }
 
 .modlist.info {
     content-align: center middle;
-    width: 1fr;
+    width: auto;
     height: 1fr;
+}
+
+.modlist.info.spacer {
+    width: 1fr;
 }
 
 #modlist-buttons {
@@ -20,11 +25,16 @@
 .modlist.button {
     margin: 0 1;
     width: 1fr;
-    min-width: 20;
+    max-width: 20;
+    min-width: 10;
 }
 
 .modlist.table {
     width: 1fr;
     height: 1fr;
-    margin: 0 1 1 1;
+    margin: 0 1 0 1;
+}
+
+#modlist-filter-label {
+    padding-left: 1;
 }

@@ -124,7 +124,7 @@ class NewInstanceScreen(Screen):
             yield Static(id='spacer2', classes='modpack')
 
             yield Static('Version:', classes='text modpack')
-            self.version_selector = Button('Select Version', id='version_select', classes='button modpack') # replace with Select if allows for showing additional info
+            self.version_selector = Button('Select Version', id='version_select', classes='button modpack')
             yield self.version_selector
             yield Button('Modlist', id='modlist_button', classes='button modpack')
 
@@ -216,19 +216,26 @@ class NewInstanceScreen(Screen):
         # - get limit from settings, add way to load more
         title, data = await self.source_api.search_modpacks(query, limit=20)
 
+        if not title or not data:
+            self.notify(f"Couldn't load Modpacks. Query: '{query}'", severity='error', timeout=5)
+            return
+
         async def modpack_selected(result: str | None) -> None:
             if result:
                 selected_pack = next((r for r in data if r["slug"] == result), None)
                 if selected_pack: # ["Name", "Author", "Downloads", "Modloader", "Categories", "Slug", "Description"]
+                    self.modlist = [] # clear modlist when changing modpack
                     self.modpack_name = str(selected_pack["name"])
                     self.modpack_slug = str(selected_pack["slug"])
                     self.instance_name.value = self.modpack_name
-                    self.versions = await self.source_api.get_modpack_versions(str(selected_pack["slug"]))
                     self.description.update(str(selected_pack["description"]))
                     self.author.update(str(selected_pack["author"]))
-                    self.version_selector.label = self.versions[0]["version_number"]
-                    self.selected_modpack_version = self.versions[0]
-                    self.modlist = [] # clear modlist when changing modpack
+                    self.versions = await self.source_api.get_modpack_versions(str(selected_pack["slug"]))
+                    if not self.versions:
+                        self.notify(f"Couldn't get Modpack versions for {self.modpack_name}.", severity='error', timeout=5)
+                    else:
+                        self.version_selector.label = self.versions[0]["version_number"]
+                        self.selected_modpack_version = self.versions[0]
             self.query_one('#search_button').loading = False
 
 
@@ -264,7 +271,6 @@ class NewInstanceScreen(Screen):
 
     @on(Select.Changed)
     def select_changed(self, event: Select.Changed) -> None:
-        # - clear modpack on source change?
         match event.select.id:
             case 'source_select':
                 self.title = str(event.value)
@@ -274,6 +280,17 @@ class NewInstanceScreen(Screen):
                     self.set_install_mode(source["install_mode"])
                     self.source = source["key"]
                     self.source_api = source["api"]
+
+                    # reset modpack selection
+                    self.versions = []
+                    self.modpack_name = ''
+                    self.modpack_slug = ''
+                    self.selected_modpack_version = {}
+                    self.modlist = []
+                    self.instance_name.value = ''
+                    self.description.update('')
+                    self.author.update('')
+                    self.version_selector.label = 'Select Version'
 
                     if source["notify"]:
                         self.notify(source["notify"], severity='information', timeout=5)
@@ -407,7 +424,7 @@ class NewInstanceScreen(Screen):
         if choices:
             self.app.push_screen(
                 SelectorModal(
-                    "Choose Version",
+                    "Choose Modpack Version",
                     choices,
                     return_field='id',
                     hide_return_field=True,
@@ -486,6 +503,6 @@ class NewInstanceScreen(Screen):
             formatted_modlist = "\n".join(f"- {mod['name']} ({mod['version_number']})" for mod in modlist)
             self.app.push_screen(TextDisplayModal("Modlist", formatted_modlist))
         else:
-            self.notify('Could not load Modlist.', severity='information', timeout=5)
+            self.notify('Could not load Modlist.', severity='error', timeout=5)
         self.query_one('#modlist_button').loading = False
 

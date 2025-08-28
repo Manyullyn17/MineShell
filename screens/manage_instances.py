@@ -10,6 +10,7 @@ from screens.new_instance import NewInstanceScreen
 from screens.delete_modal import DeleteModal
 from textual.binding import Binding
 from backend.storage.instance import InstanceRegistry
+from helpers import CustomTable
 
 class ManageInstancesScreen(Screen):
     CSS_PATH = 'styles/manage_instances_screen.tcss'
@@ -25,9 +26,9 @@ class ManageInstancesScreen(Screen):
     ]
 
     navigation_map = {
-            "instances_list":   {"left":"back",             "up": "",               "down": "",                 "right": "new_instance"},
-            "new_instance":     {"left":"instances_list",   "up": "instances_list", "down": "instances_list",   "right": "back"},
-            "back":             {"left":"new_instance",     "up": "instances_list", "down": "instances_list",   "right": "instances_list"},
+            "instances_list":   {"left":"",                 "up": "",               "down": "new_instance", "right": "new_instance"},
+            "new_instance":     {"left":"instances_list",   "up": "instances_list", "down": "",             "right": "back"},
+            "back":             {"left":"new_instance",     "up": "instances_list", "down": "",             "right": ""},
     }
 
     selected_instance: str | None = None # instance_id
@@ -37,7 +38,7 @@ class ManageInstancesScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
-        self.table = DataTable(id='instances_list', cursor_type='row', zebra_stripes=True)
+        self.table = CustomTable(id='instances_list', cursor_type='row', zebra_stripes=True)
         yield self.table
 
         with Horizontal(id='button-row'):
@@ -48,7 +49,7 @@ class ManageInstancesScreen(Screen):
 
     def on_mount(self) -> None:
         self.sub_title = 'Manage Instances'
-        self.table.loading = True
+        self.table.focus()
         self.registry = InstanceRegistry.load()
 
     def _on_screen_resume(self) -> None:
@@ -56,6 +57,7 @@ class ManageInstancesScreen(Screen):
 
     @work
     async def load_table(self):
+        self.table.loading = True
         self.table.clear()
         self.table.columns.clear()
         columns = ['Name', 'Status', 'Created', 'Pack Version', 'Modloader', 'Minecraft Version']

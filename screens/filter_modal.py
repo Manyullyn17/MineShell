@@ -37,12 +37,10 @@ class FilterModal(ModalScreen[dict]):
         rows = len(self.filter_columns) + 2
         self.grid.styles.grid_size_rows = rows
         self.grid.styles.grid_size_columns = 2
-        longest = len(max(self.column_names, key=len))
+        longest = min(len(max(self.filter_columns, key=len)), 7)
         self.grid.styles.grid_columns = f'{longest+2} 1fr'
-        # row_size = " 3"*(len(self.filter_columns))
         row_size = " auto"*(len(self.filter_columns))
         self.grid.styles.grid_rows = f'{row_size} 1fr 4'
-        # self.grid.styles.height = str(rows*3 + 3)
 
         self.grid.border_title = 'Filter Table'
         self.grid.border_subtitle = 'r to reset'
@@ -71,8 +69,19 @@ class FilterModal(ModalScreen[dict]):
             first = unique_values[column][0].rsplit('.')[0]
             reverse = True if first.isdigit() else False
             self.grid.mount(Label(column.replace('_', ' ').title(), classes='filter label'))
-            self.grid.mount(Collapsible(SelectionList(*((v, v) for v in sorted(unique_values[column], key=sort_key, reverse=reverse)), compact=True, id=f'filter-{column}', classes='filter selectionlist'), title='All', id=f'{column}-collapsible'))
-            # self.grid.mount(CustomSelect.from_values(sorted(unique_values[column], key=sort_key, reverse=reverse), id=f'filter-{column}', classes='filter select'))
+            self.grid.mount(
+                Collapsible(
+                    SelectionList(
+                        *((v, v) for v in sorted(unique_values[column], key=sort_key, reverse=reverse)),
+                        compact=True,
+                        id=f'filter-{column}',
+                        classes='filter selectionlist'
+                        ),
+                    title='All',
+                    id=f'{column}-collapsible',
+                    classes='filter collapsible'
+                    )
+                )
             self.select_ids.append(f'filter-{column}')
             self.collapsible_ids.append(f'{column}-collapsible')
 
@@ -95,15 +104,13 @@ class FilterModal(ModalScreen[dict]):
 
             self.navigation_map[select_id] = nav
         
-        # self.navigation_map['filter-done-button'] = {'left': 'filter-back-button', 'up': self.select_ids[-1], 'down': '', 'right': ''}
-        # self.navigation_map['filter-back-button'] = {'left': '', 'up': self.select_ids[-1], 'down': '', 'right': 'filter-done-button'}
         self.navigation_map['filter-done-button'] = {'left': 'filter-back-button', 'up': self.collapsible_ids[-1], 'down': '', 'right': ''}
         self.navigation_map['filter-back-button'] = {'left': '', 'up': self.collapsible_ids[-1], 'down': '', 'right': 'filter-done-button'}
 
         self.grid.mount(Static(id='filter-spacer', classes='filter spacer'))
         self.grid.mount(Button('Back', id='filter-back-button', classes='filter button'))
         self.grid.mount(Button('Done', id='filter-done-button', classes='filter button'))
-    
+
     def _on_resize(self, event: Resize):
         self.resize_selectionlist()
         return super()._on_resize(event)
@@ -114,7 +121,7 @@ class FilterModal(ModalScreen[dict]):
         selectionlist_height = max(available_height - 1, 3) # -1 for extra row from collapsible expanding, minimum of 3
 
         for select in self.query(SelectionList):
-            select.styles.height = selectionlist_height
+            select.styles.max_height = selectionlist_height
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:

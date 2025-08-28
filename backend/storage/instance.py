@@ -1,3 +1,4 @@
+import os
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional, Literal, ClassVar
 from datetime import datetime
@@ -23,6 +24,15 @@ class ModEntry(BaseModel):
     from_modpack: bool = False
     is_override: bool = False
 
+    def formatted_date(self, format=DATE_FORMAT) -> str:
+            if not self.install_date:
+                return ''
+            return format_date(self.install_date.isoformat(), format)
+    
+    def formatted_release_date(self, format=DATE_FORMAT) -> str:
+            if not self.release_date:
+                return ''
+            return format_date(self.release_date.isoformat(), format)
 
 class ModList(BaseModel):
     mods: List[ModEntry] = []
@@ -32,6 +42,7 @@ class ModList(BaseModel):
         return cls.model_validate_json(path.read_text(encoding='utf-8'))
 
     def save(self, path: Path):
+        path = path / 'mods.json'
         path.write_text(self.model_dump_json(indent=4), encoding='utf-8')
 
     def get_mod(self, mod_id: str) -> Optional[ModEntry]:
@@ -46,9 +57,19 @@ class ModList(BaseModel):
         self.mods.append(mod)
         return True
 
-    def remove_mod(self, mod_id: str) -> bool:
+    def remove_mod(self, mod_id: str, instance_path: Path) -> bool:
         before = len(self.mods)
-        self.mods = [m for m in self.mods if m.mod_id != mod_id]
+        mod = self.get_mod(mod_id)
+        if not mod:
+            return False
+        # - change to use datapacks path
+        del_path = instance_path / (Path("mods") if mod.type == 'mod' else Path("world")) / "datapacks" / mod.filename
+        try:
+            if del_path.exists():
+                os.remove(del_path) # delete mod file
+        except:
+            return False
+        self.mods = [m for m in self.mods if m.mod_id != mod_id] # delete mod from modlist
         return len(self.mods) < before
 
     def enable_mod(self, mod_id: str) -> bool:
@@ -64,6 +85,29 @@ class ModList(BaseModel):
             return False
         mod.enabled = False
         return True
+
+    def to_dict(self, dateformat: str = DATE_FORMAT) -> list[dict[str, str | list[str]]]:
+        modlist: list[dict[str, str | list[str]]] = []
+
+        for mod in self.mods:
+            modlist.append({
+                'mod_id': mod.mod_id,
+                'slug': mod.slug or '',
+                'name': mod.name,
+                'version': mod.version or '',
+                'version_id': mod.version_id or '',
+                'release_date': mod.release_date.isoformat() if mod.release_date else '',
+                'formatted_release_date': mod.formatted_release_date(dateformat),
+                'source': mod.source.capitalize() if not mod.is_override else 'Override',
+                'type': mod.type.capitalize(),
+                'filename': mod.filename,
+                'enabled': str(mod.enabled),
+                'install_date': mod.install_date.isoformat(),
+                'formatted_date': mod.formatted_date(dateformat),
+                'from_modpack': str(mod.from_modpack),
+                'is_override': str(mod.is_override)
+            })
+        return modlist
 
 # ----------------------------
 # Instance configuration
@@ -148,7 +192,7 @@ class InstanceConfig(BaseModel):
         mods_dir.mkdir(parents=True, exist_ok=True)
 
         # Save mods.json
-        mods_json = self.path / "mods" / "mods.json"
+        mods_json = self.path / "mods"
         self.mods.save(mods_json)
 
 class InstanceSummary(BaseModel):
@@ -159,6 +203,7 @@ class InstanceSummary(BaseModel):
     pack_version: str | None = None
     modloader: Literal["fabric", "forge", "neoforge", "quilt"] | None = None
     minecraft_version: str | None = None
+    datapacks_folder: Path = Path("world") / "datapacks"
     path: Path | None = None  # path to instance folder
 
     MODLOADER_DISPLAY: ClassVar = {

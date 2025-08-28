@@ -80,8 +80,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     await smooth_step_callback(f'Running {instance.formatted_modloader()} installer')
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
-    if result != 0:
-        return 3, str(result)
+    # if result != 0:
+    #     return 3, str(result)
     progress_bar_callback(total=100, progress=100, step=3)
     await asyncio.sleep(0.1)
 
@@ -90,10 +90,11 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     # 4. Copy Overrides
     step_callback(steps[3], 0)
-
     await smooth_step_callback('Removing client only overrides')
+
     overrides_path = extract_path / "overrides"
     if overrides_path.exists():
+        # - add getting datapacks folder path
         for folder in ['resourcepacks', 'shaderpacks']:
             bad_path = overrides_path / folder
             if bad_path.exists():
@@ -130,6 +131,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         await smooth_step_callback('Getting Project Ids')
         project_ids = [dep["project_id"] for dep in dependencies if dep["project_id"]]
         projects = await modrinth.fetch_projects(project_ids)
+        if not projects:
+            return 5, 'Could not get Projects'
         progress_bar_callback(total=100, progress=33, step=5)
 
         if cancel_event.is_set():
@@ -138,6 +141,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         await smooth_step_callback('Getting Version Ids')
         version_ids = [dep["version_id"] for dep in dependencies if dep["project_id"] in projects]
         versions = await modrinth.fetch_versions(version_ids)
+        if not versions:
+            return 5, 'Could not get Versions'
         progress_bar_callback(total=100, progress=66, step=5)
 
         if cancel_event.is_set():
@@ -171,6 +176,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
                 return -1, 'cancelled'
 
         for datapack in datapacks:
+            # - use custom datapacks path if available
             await download_file(datapack["download_url"], instance_path / 'world' / 'datapacks' / datapack["file_name"])
             mod_num += 1
             step_callback(f'Downloading {datapack["name"]}')
@@ -241,7 +247,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         instance.mods.add_mod(ModEntry(
             mod_id=mod["project_id"],
             slug=mod["slug"],
-            name=mod["name"],
+            name=mod["name"].lstrip(),
             version=mod["version_number"],
             version_id=mod["version_id"],
             release_date=mod["date_published"],
@@ -267,8 +273,6 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 # 2. Installing Modloader
 # 3. Finalizing Installation
 
-# TO-DO:
-# - update modloader install logic
 async def install_modloader(instance: InstanceConfig, steps: list[str], progress_bar_callback, step_callback, cancel_event: asyncio.Event, mc_version_url: str | None = None) -> tuple[int, str]:
     async def smooth_step_callback(step: str, label_id: int=1):
         step_callback(step, label_id)
@@ -373,7 +377,7 @@ async def copytree_with_progress(
         rel_path = Path(root).relative_to(src)
         target_dir = dst / rel_path
         target_dir.mkdir(parents=True, exist_ok=dirs_exist_ok)
-
+        # - copy all datapacks to the datapacks path (for if it's just overrides/datapacks so it goes to world/datapacks)
         for file in files:
             src_file = Path(root) / file
             dst_file = target_dir / file

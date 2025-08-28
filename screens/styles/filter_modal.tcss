@@ -28,3 +28,11 @@ ModalScreen {
 #filter-spacer {
     column-span: 2;
 }
+
+.filter.selectionlist {
+    margin: 0 5 0 0;
+}
+
+.filter.collapsible {
+    margin: 0 2 0 0;
+}

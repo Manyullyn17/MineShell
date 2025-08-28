@@ -9,19 +9,22 @@ HEADERS={"User-Agent": USER_AGENT}
 class ModrinthAPI(SourceAPI):
     async def search_modpacks(self, query: str, limit: int=20) -> tuple[str, list[dict[str, str | list[str]]]]:
         """Search modpacks on Modrinth and return data for the selector modal."""
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{MODRINTH_API}/search",
-                params={
-                    "query": query,
-                    "facets": '[["project_type:modpack"]]',
-                    "limit": limit
-                },
-                timeout=30.0,
-                headers=HEADERS
-            )
-            resp.raise_for_status()
-            results = resp.json()["hits"]
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{MODRINTH_API}/search",
+                    params={
+                        "query": query,
+                        "facets": '[["project_type:modpack"]]',
+                        "limit": limit
+                    },
+                    timeout=15.0,
+                    headers=HEADERS
+                )
+                resp.raise_for_status()
+                results = resp.json()["hits"]
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return '', []
 
         # Build rows for the modal: [project_id, title, slug, downloads, client/server]
         rows = []
@@ -63,11 +66,13 @@ class ModrinthAPI(SourceAPI):
         Each item is [version_name, date_published].
         Sorted newest first.
         """
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{MODRINTH_API}/project/{modpack_id}/version", headers=HEADERS)
-            resp.raise_for_status()
-            versions = resp.json()
-
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(f"{MODRINTH_API}/project/{modpack_id}/version", headers=HEADERS, timeout=15.0)
+                resp.raise_for_status()
+                versions = resp.json()
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return []
         # Sort newest first
         versions.sort(key=lambda v: v["date_published"], reverse=True)
 
@@ -141,11 +146,13 @@ async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
 
     url = f"{MODRINTH_API}/projects?ids={json.dumps(project_ids)}"
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(url, headers=HEADERS)
-        resp.raise_for_status()
-        projects_list = resp.json()
-
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(url, headers=HEADERS)
+            resp.raise_for_status()
+            projects_list = resp.json()
+    except (httpx.ReadTimeout, httpx.TimeoutException):
+        return {}
     # Filter server-side mods
     server_projects = {
         proj["id"]: proj
@@ -170,10 +177,12 @@ async def fetch_versions(version_ids: list[str]) -> list[dict]:
         return []
 
     url = f"{MODRINTH_API}/versions?ids={json.dumps(version_ids)}"
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(url, headers=HEADERS)
-        resp.raise_for_status()
-        versions_list = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(url, headers=HEADERS)
+            resp.raise_for_status()
+            versions_list = resp.json()
+    except (httpx.ReadTimeout, httpx.TimeoutException):
+        return []
 
     return versions_list
