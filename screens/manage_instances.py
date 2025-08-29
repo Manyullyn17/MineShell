@@ -100,6 +100,7 @@ class ManageInstancesScreen(Screen):
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
 
+    # - show context menu on right click
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_instance = str(event.row_key.value)
         instance = self.registry.get_instance(selected_instance)

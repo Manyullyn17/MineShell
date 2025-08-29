@@ -181,6 +181,7 @@ class ModListScreen(Screen):
         return
     
     def action_add_mods(self):
+        # - open mod browser screen/modal, needs implementing
         return
 
     def delete_instance(self):
@@ -238,6 +239,5 @@ class ModListScreen(Screen):
                 return (dt_sort, name.lower())
             else:
                 return str(value).lower()
-        if sort_method:
-            column, reverse = sort_map[sort_method]
-            self.table.sort(*column, reverse=reverse, key=sort_key)
+        column, reverse = sort_map[sort_method]
+        self.table.sort(*column, reverse=reverse, key=sort_key)
