@@ -67,13 +67,12 @@ class ProgressModal(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case "cancel-install":
-                # cancel logic
                 self.cancel_event.set()
                 self.query_one('#cancel-install').disabled = True
                 self.progress_step.update('Cancelling installation...')
             case "finish":
                 self.dismiss('finished')
-            case "retry": # doesn't work? it should though
+            case "retry-install":
                 self.query_one('#retry-install').disabled = True
                 self.start_install()
 

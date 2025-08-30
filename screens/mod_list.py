@@ -21,6 +21,8 @@ class ModListScreen(Screen):
         Binding('e', "enable_disable", "Enable/Disable", show=True),
         Binding('u', "update", "Update", show=True),
         Binding('a', "add_mods", "Add Mods", show=True),
+        Binding('f', "filter", "Filter", show=True),
+        Binding('s', "sort", "Sort", show=True),
         Binding('up', "focus_move('up')", show=False),
         Binding('down', "focus_move('down')", show=False),
         Binding('left', "focus_move('left')", show=False),
@@ -133,13 +135,7 @@ class ModListScreen(Screen):
             case 'modlist-filter-button':
                 self.filter_table()
             case 'modlist-sort-button':
-                def check_sort(result: tuple[str, bool] | None) -> None:
-                    if result:
-                        column, reverse = result
-                        self.current_sorting = cast(Literal['Name', 'Reverse-Name', 'Date', 'Reverse-Date'], ('Reverse-' if reverse else '') + column)
-                        self.sort_table(self.current_sorting)
-
-                self.app.push_screen(SortModal(['Name', 'Date']), check_sort)
+                self.open_sort_modal()
                 return
             case 'modlist-update-button': # different from action_update, opens modal for selection of update all or update modpack, if not a modpack, only confirmation for update all
                 return
@@ -184,6 +180,12 @@ class ModListScreen(Screen):
         # - open mod browser screen/modal, needs implementing
         return
 
+    def action_filter(self):
+        self.filter_table()
+
+    def action_sort(self):
+        self.open_sort_modal()
+
     def delete_instance(self):
         if self.selected_mod:
             mod = self.modlist.get_mod(self.selected_mod)
@@ -223,6 +225,15 @@ class ModListScreen(Screen):
         
         self.app.push_screen(FilterModal(self.modlist.to_dict(), ['type', 'enabled', 'source']), filter_chosen)
         return
+
+    def open_sort_modal(self):
+        def check_sort(result: tuple[str, bool] | None) -> None:
+            if result:
+                column, reverse = result
+                self.current_sorting = cast(Literal['Name', 'Reverse-Name', 'Date', 'Reverse-Date'], ('Reverse-' if reverse else '') + column)
+                self.sort_table(self.current_sorting)
+
+        self.app.push_screen(SortModal(['Name', 'Date']), check_sort)
 
     def sort_table(self, sort_method: Literal['Name', 'Reverse-Name', 'Date', 'Reverse-Date'] = 'Name'):
         sort_map = {

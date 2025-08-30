@@ -37,7 +37,7 @@ class FilterModal(ModalScreen[dict]):
         rows = len(self.filter_columns) + 2
         self.grid.styles.grid_size_rows = rows
         self.grid.styles.grid_size_columns = 2
-        longest = min(len(max(self.filter_columns, key=len)), 7)
+        longest = max(len(max(self.filter_columns, key=len)), 7)
         self.grid.styles.grid_columns = f'{longest+2} 1fr'
         row_size = " auto"*(len(self.filter_columns))
         self.grid.styles.grid_rows = f'{row_size} 1fr 4'

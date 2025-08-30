@@ -80,8 +80,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     await smooth_step_callback(f'Running {instance.formatted_modloader()} installer')
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
-    # if result != 0:
-    #     return 3, str(result)
+    if result != 0:
+        return 3, str(result)
     progress_bar_callback(total=100, progress=100, step=3)
     await asyncio.sleep(0.1)
 

@@ -416,6 +416,7 @@ class NewInstanceScreen(Screen):
                 "game_version": ", ".join(v.get("game_versions", [])),
                 "modloader": ", ".join(v.get("loaders", [])).title(),
                 "release_date": format_date(v["date_published"]),
+                "version_type": v.get("version_type", "unknown").title(),
                 "id": v["id"]
                 if v.get("date_published") else ""
             }
@@ -428,7 +429,7 @@ class NewInstanceScreen(Screen):
                     choices,
                     return_field='id',
                     hide_return_field=True,
-                    filter_columns=['game_version', 'modloader']
+                    filter_columns=['game_version', 'modloader', 'version_type']
                 ),
                 version_chosen
             )
