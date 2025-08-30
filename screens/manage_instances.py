@@ -49,7 +49,6 @@ class ManageInstancesScreen(Screen):
 
     def on_mount(self) -> None:
         self.sub_title = 'Manage Instances'
-        self.table.focus()
         self.registry = InstanceRegistry.load()
 
     def _on_screen_resume(self) -> None:
@@ -88,7 +87,12 @@ class ManageInstancesScreen(Screen):
             ]
             self.table.add_row(*row, key=instance.instance_id)
 
+        row_index = self.table.get_row_index(self.selected_instance) if self.selected_instance else None
+        if row_index: # doesn't run if row_index is 0 or None but it auto selects first row anyway
+            self.table.move_cursor(row=row_index)
+
         self.table.loading = False
+        self.table.focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
