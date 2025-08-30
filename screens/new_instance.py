@@ -501,7 +501,7 @@ class NewInstanceScreen(Screen):
             modlist = await self.source_api.get_modlist(self.selected_modpack_version["dependencies"])
         if modlist:
             self.modlist = modlist
-            formatted_modlist = "\n".join(f"- {mod['name']} ({mod['version_number']})" for mod in modlist)
+            formatted_modlist = "\n".join(f"- {mod['name']} ({mod['version_number']})" for mod in sorted(modlist, key=lambda m: m['name'].lower()))
             self.app.push_screen(TextDisplayModal("Modlist", formatted_modlist))
         else:
             self.notify('Could not load Modlist.', severity='error', timeout=5)
