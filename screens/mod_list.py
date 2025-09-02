@@ -163,7 +163,7 @@ class ModListScreen(Screen):
     def action_delete(self): # delete mod with confirmation
         def check_delete(delete: bool | None) -> None:
             if delete and self.selected_mod:
-                self.delete_instance()
+                self.delete_mod()
         if not self.selected_mod:
             return
         mod = self.modlist.get_mod(self.selected_mod)
@@ -186,7 +186,7 @@ class ModListScreen(Screen):
     def action_sort(self):
         self.open_sort_modal()
 
-    def delete_instance(self):
+    def delete_mod(self):
         if self.selected_mod:
             mod = self.modlist.get_mod(self.selected_mod)
             if not self.modlist.remove_mod(self.selected_mod, self.instance.path):
