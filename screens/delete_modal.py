@@ -1,4 +1,5 @@
-from textual import events
+from textual import events, on
+from textual.events import MouseDown
 from textual.app import ComposeResult
 from textual.widgets import Button, Label
 from textual.screen import ModalScreen
@@ -17,12 +18,11 @@ class DeleteModal(ModalScreen[bool]):
         self.title = title
 
     def compose(self) -> ComposeResult:
-        yield Grid(
-            Label(f'{self.title}', id='question'),
-            Button('Yes', variant='primary', id='yes'),
-            Button('No', variant='error', id='no'),
-            id='delete-dialog'
-        )
+        self.grid = Grid(id='delete-dialog')
+        with self.grid:
+            yield Label(f'{self.title}', id='question')
+            yield Button('Yes', variant='primary', id='yes')
+            yield Button('No', variant='error', id='no')
 
     def on_mount(self) -> None:
         self.query_one('#no', expect_type=Button).focus()
@@ -47,3 +47,17 @@ class DeleteModal(ModalScreen[bool]):
     def action_back(self):
         self.app.pop_screen()
 
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        width, height = self.size
+        if not self.grid.styles.width or not self.grid.styles.height:
+            return
+        m_width = self.grid.styles.width.value
+        m_height = self.grid.styles.height.value
+
+        mouse_x = event.screen_x
+        mouse_y = event.screen_y
+
+        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
+            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
+            self.dismiss()

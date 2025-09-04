@@ -34,7 +34,8 @@ class ModListScreen(Screen):
         "modlist-filter-button":    {"left": "modlist-search",           "up": "",  "down": "modlist-table", "right": "modlist-sort-button"},
         "modlist-sort-button":      {"left": "modlist-filter-button",    "up": "",  "down": "modlist-table", "right": "modlist-update-button"},
         "modlist-update-button":    {"left": "modlist-sort-button",      "up": "",  "down": "modlist-table", "right": "modlist-add-mod-button"},
-        "modlist-add-mod-button":   {"left": "modlist-update-button",    "up": "",  "down": "modlist-table", "right": ""},
+        "modlist-add-mod-button":   {"left": "modlist-update-button",    "up": "",  "down": "modlist-table", "right": "modlist-back-button"},
+        "modlist-back-button":      {"left": "modlist-add-mod-button",   "up": "",  "down": "modlist-table", "right": ""},
         "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": ""}
     }
 
@@ -75,6 +76,7 @@ class ModListScreen(Screen):
                 yield Button('Sort', id='modlist-sort-button', classes='modlist button') # sort by name and install date, normal and reverse
                 yield Button('Update', id='modlist-update-button', classes='modlist button')
                 yield Button('Add Mods', id='modlist-add-mod-button', classes='modlist button')
+                yield Button('Back', id='modlist-back-button', classes='modlist button')
 
             self.table = CustomTable(classes='modlist table', id='modlist-table', cursor_type='row', zebra_stripes=True)
             yield self.table
@@ -141,6 +143,8 @@ class ModListScreen(Screen):
                 return
             case 'modlist-add-mod-button':
                 self.action_add_mods()
+            case 'modlist-back-button':
+                self.app.pop_screen()
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_mod = str(event.row_key.value)

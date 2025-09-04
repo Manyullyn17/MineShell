@@ -1,3 +1,6 @@
+from packaging.version import Version, InvalidVersion
+from textual import on
+from textual.events import Resize, MouseDown
 from textual.widgets import DataTable
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
@@ -14,7 +17,8 @@ class SelectorModal(ModalScreen[str]):
             Binding('r', 'reset', 'Reset', show=True),
         ]
 
-    def __init__(self, title: str, choices: list[dict[str, str | list[str]]], return_field: str='', hide_return_field: bool=False, show_filter: bool = True, filter_columns: list[str] | None = None):
+    def __init__(self, title: str, choices: list[dict[str, str | list[str]]], return_field: str='', hide_return_field: bool=False,
+                 show_filter: bool = True, filter_columns: list[str] | None = None, sort_column: str | None = None, sort_reverse: bool = True):
         super().__init__()
         self.title_txt = title
         self.subtitle_txt = 'f to filter, r to reset' if show_filter else ''
@@ -22,8 +26,10 @@ class SelectorModal(ModalScreen[str]):
         self.return_field: str = return_field if return_field else next(iter(choices[0]))
         self.hide_return_field = hide_return_field
         self.filter_columns = filter_columns
-
         self.show_filter = show_filter
+        self.sort_column = sort_column
+        self.sort_reverse = sort_reverse
+        self.min_width = max(len(title) + 6, len(self.subtitle_txt if show_filter else '') + 4)
 
     def compose(self) -> ComposeResult:
         # Determine the maximum number of columns in choices
@@ -34,9 +40,9 @@ class SelectorModal(ModalScreen[str]):
         # Add columns dynamically
         for column in self.choices[0].keys():
             if self.hide_return_field and column == self.return_field:
-                self.table.add_column(column.replace('_', ' ').title(), width=0)
+                self.table.add_column(column.replace('_', ' ').title(), key=column, width=0)
             else:
-                self.table.add_column(column.replace('_', ' ').title())
+                self.table.add_column(column.replace('_', ' ').title(), key=column)
 
         # Add rows
         self.load_table(self.choices)
@@ -44,6 +50,14 @@ class SelectorModal(ModalScreen[str]):
         self.table.border_title = self.title_txt
         self.table.border_subtitle = self.subtitle_txt
         yield self.table
+
+    def on_mount(self):
+        self.length = 4 + sum((col.content_width if col.width != 0 else 0) + 2 for col in self.table.columns.values())
+
+    def _on_resize(self, event: Resize):
+        self.table.styles.width = min(int(self.size.width * 0.8), max(self.min_width, self.length))
+        self.table.styles.height = min(int(self.size.height * 0.8), len(self.table.rows) + 4)
+        return super()._on_resize(event)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_row = event.row_key.value
@@ -98,3 +112,25 @@ class SelectorModal(ModalScreen[str]):
                 for cell in choice.values()
             ]
             self.table.add_row(*row, key=str(choice[self.return_field]))
+        if self.sort_column:
+            def version_key(v: str):
+                try:
+                    return Version(v)
+                except InvalidVersion:
+                    return v
+            self.table.sort(self.sort_column, key=lambda r: version_key(r) ,reverse=self.sort_reverse)
+
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        width, height = self.size
+        if not self.table.styles.width or not self.table.styles.height:
+            return
+        m_width = self.table.styles.width.value
+        m_height = self.table.styles.height.value
+
+        mouse_x = event.screen_x
+        mouse_y = event.screen_y
+
+        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
+            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
+            self.dismiss()

@@ -1,5 +1,5 @@
 from textual import on
-from textual.events import Resize
+from textual.events import Resize, MouseDown
 from textual.widgets import Label, Button, Collapsible, SelectionList, Static
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
@@ -113,6 +113,8 @@ class FilterModal(ModalScreen[dict]):
 
     def _on_resize(self, event: Resize):
         self.resize_selectionlist()
+        self.grid.styles.width = int(self.size.width * 0.5)
+        self.grid.styles.height = int(self.size.height * 0.8)
         return super()._on_resize(event)
 
     def resize_selectionlist(self):
@@ -217,3 +219,18 @@ class FilterModal(ModalScreen[dict]):
         for id in self.select_ids:
             self.query_one(f'#{id}', expect_type=SelectionList).deselect_all()
         self.filters = {}
+
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        width, height = self.size
+        if not self.grid.styles.width or not self.grid.styles.height:
+            return
+        m_width = self.grid.styles.width.value
+        m_height = self.grid.styles.height.value
+
+        mouse_x = event.screen_x
+        mouse_y = event.screen_y
+
+        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
+            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
+            self.dismiss()

@@ -1,3 +1,5 @@
+from textual import on
+from textual.events import Resize, MouseDown
 from textual.screen import ModalScreen
 from textual.containers import Grid, VerticalScroll
 from textual.widgets import Label, Button, Static
@@ -20,21 +22,19 @@ class TextDisplayModal(ModalScreen[str | None]):
         Binding('escape', 'back', show=False),
     ]
 
-    def __init__(
-        self,
-        title: str,
-        text: str,
-        *,
-        width: int = 0,
-        height: int = 0,
-        markdown: bool = True
-    ) -> None:
+    def __init__(self, title: str, text: str, width: int = 0, height: int = 0, markdown: bool = True) -> None:
         super().__init__()
         self._title = title
         self._text = text
         self._width = width
         self._height = height
         self._markdown = markdown
+        self.longest = 0
+        self.lines = 0
+        for line in self._text.splitlines():
+            self.lines += 1
+            if len(line) > self.longest:
+                self.longest = len(line)
 
     def compose(self):
         # content widget (either Markdown or wrapped Static)
@@ -44,12 +44,11 @@ class TextDisplayModal(ModalScreen[str | None]):
             else Static(self._text, id="tdm-content", expand=True)
         )
 
-        yield Grid(
-            Label(self._title, id="tdm-title"),
-            VerticalScroll(content, id="tdm-scroll"),
-            Button("Close", id="tdm-close"),
-            id="tdm-grid"
-        )
+        self.grid = Grid(id="tdm-grid")
+
+        with self.grid:
+            yield VerticalScroll(content, id="tdm-scroll")
+            yield Button("Close", id="tdm-close")
 
     def on_mount(self):
         grid = self.query_one("#tdm-grid")
@@ -57,9 +56,16 @@ class TextDisplayModal(ModalScreen[str | None]):
             grid.styles.width = self._width
         if self._height:
             grid.styles.height = self._height
-
+        self.grid.border_title = self._title
         # focus the scroll view so the mouse wheel / arrows work immediately
         self.query_one("#tdm-scroll").focus()
+
+    def _on_resize(self, event: Resize):
+        if not self._width:
+            self.grid.styles.width = max(min(int(self.size.width * 0.8), self.longest + 12), 10)
+        if not self._height:
+            self.grid.styles.height = min(int(self.size.height * 0.8), self.lines + 10)
+        return super()._on_resize(event)
 
     def action_back(self):
         self.dismiss(None)
@@ -67,3 +73,18 @@ class TextDisplayModal(ModalScreen[str | None]):
     def on_button_pressed(self, event: Button.Pressed):
         if event.button.id == "tdm-close":
             self.dismiss(None)
+
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        width, height = self.size
+        if not self.grid.styles.width or not self.grid.styles.height:
+            return
+        m_width = self.grid.styles.width.value
+        m_height = self.grid.styles.height.value
+
+        mouse_x = event.screen_x
+        mouse_y = event.screen_y
+
+        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
+            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
+            self.dismiss()

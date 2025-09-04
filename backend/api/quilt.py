@@ -13,6 +13,7 @@ async def get_quilt_versions(mc_version: str) -> list[dict]:
     return [{
         "version": loader["loader"]["version"],
         "build": loader["loader"]["build"],
+        "release": False if 'beta' in loader["loader"]["version"] or 'pre' in loader["loader"]["version"] else True
     } for loader in data]
 
 async def get_latest_quilt_installer():

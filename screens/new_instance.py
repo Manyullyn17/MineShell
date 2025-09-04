@@ -16,7 +16,10 @@ from backend.api.modrinth import ModrinthAPI
 from backend.api.curseforge import CurseforgeAPI
 from backend.api.ftb import FTBAPI
 from backend.api.mojang import get_minecraft_versions
-from backend.api.fabric import list_fabric_versions
+from backend.api.fabric import get_fabric_versions
+from backend.api.forge import get_forge_versions
+from backend.api.neoforge import get_neoforge_versions
+from backend.api.quilt import get_quilt_versions
 from backend.storage.instance import InstanceConfig
 from helpers import format_date, sanitize_filename, CustomSelect, SmartInput
 
@@ -184,23 +187,22 @@ class NewInstanceScreen(Screen):
     def on_mount(self) -> None:
         self.sub_title = 'New Instance'
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case 'back':
                 self.action_back()
             case 'install':
                 self.install()                    
             case 'search_button':
-                self.query_one('#search_button').loading = True
                 self.search_modpack()
             case 'version_select':
-                self.select_version()
+                self.run_worker(self.select_version(), exclusive=True, name='version_select')
             case 'changelog_button':
                 self.open_changelog()
             case 'mc_version_selector':
-                self.select_mc_version()
+                self.run_worker(self.select_mc_version(), exclusive=True, name='mc_version_select')
             case 'modloader_version_selector':
-                self.select_modloader_version()
+                self.run_worker(self.select_modloader_version(), exclusive=True, name='modloader_version_select')
             case 'modlist_button':
                 self.query_one('#modlist_button').loading = True
                 self.run_worker(self.show_modlist(), exclusive=True, name='modlist_load')
@@ -395,13 +397,16 @@ class NewInstanceScreen(Screen):
             self.query_one('#install').loading = False
 
     def search_modpack(self):
+        self.query_one('#search_button').loading = True
         self.run_worker(self.open_modpack_selector(self.search.value), exclusive=True, name='modpack_search')
 
-    def select_version(self):
+    async def select_version(self):
         if not self.versions:
             self.notify('Please select a Modpack first.', severity='information', timeout=5)
             return
 
+        self.version_selector.loading = True
+        
         def version_chosen(result: str | None) -> None:
             if result:
                 version = next((v for v in self.versions if v["id"] == result), None)
@@ -409,6 +414,7 @@ class NewInstanceScreen(Screen):
                     self.version_selector.label = version["version_number"]
                     self.selected_modpack_version = version
                     self.modlist = [] # clear modlist when changing version
+            self.version_selector.loading = False
 
         choices: list[dict[str, str | list[str]]] = [
             {
@@ -446,12 +452,15 @@ class NewInstanceScreen(Screen):
         else:
             self.notify('Could not load Changelog.', severity='error', timeout=5)
 
-    def select_mc_version(self):
+    async def select_mc_version(self):
+        self.mc_version_selector.loading = True
+        
         def mc_version_chosen(result: str | None) -> None:
             if result:
                 self.mc_version_selector.label = result
                 self.selected_minecraft_version = next((version for version in mc_versions if version["id"] == result), {})
-        mc_versions = get_minecraft_versions()
+            self.mc_version_selector.loading = False
+        mc_versions = await get_minecraft_versions()
         version_ids: list[dict[str, list[str] | str]] = []
         for version in mc_versions:
             formatted_date = format_date(version["releaseTime"])
@@ -467,29 +476,57 @@ class NewInstanceScreen(Screen):
             )
         else:
             self.notify('Could not load Minecraft Versions.', severity='error', timeout=5)
+            self.mc_version_selector.loading = False
 
-    def select_modloader_version(self):
+    async def select_modloader_version(self):
         if not self.selected_minecraft_version:
             self.notify("Please select Minecraft Version first.", severity='information', timeout=5)
             return
+        self.modloader_version_selector.loading = True
+        
         def modloader_version_chosen(result: str | None) -> None:
             if result:
                 self.modloader_version_selector.label = result
                 self.selected_modloader_version = result
-        # - make modloader agnostic xD
-        versions = list_fabric_versions(self.selected_minecraft_version["id"])
-        versions_list: list[dict[str, list[str] | str]] = [{"version": v["version"], "stable": str(v["stable"])} for v in versions]
+            self.modloader_version_selector.loading = False
+        versions_list: list[dict[str, list[str] | str]] = await self.get_modloader_versions(self.selected_minecraft_version["id"])
+        filter_columns = {
+            "fabric": ["stable"],
+            "forge": [],
+            "neoforge": [],
+            "quilt": ["release"]
+            }
         if versions_list:
             self.app.push_screen(
                 SelectorModal(
                     "Choose Modloader Version",
                     versions_list,
-                    filter_columns=["stable"]
+                    filter_columns=filter_columns[self.selected_modloader],
+                    show_filter=filter_columns[self.selected_modloader],
+                    sort_column='version',
+                    sort_reverse=True
                 ),
                 modloader_version_chosen
             )
         else:
             self.notify("Could not load Modloader Versions.", severity='error', timeout=5)
+            self.modloader_version_selector.loading = False
+
+    async def get_modloader_versions(self, mc_version) -> list[dict[str, list[str] | str]]:
+        match self.selected_modloader:
+            case 'fabric':
+                versions = await get_fabric_versions(mc_version)
+                return [{"version": v["version"], "stable": str(v["stable"])} for v in versions]
+            case 'forge':
+                # - sorting is ascending, should be descending
+                versions = await get_forge_versions(mc_version)
+                return [{"version": v["forge_version"]} for v in versions]
+            case 'neoforge':
+                versions = await get_neoforge_versions(mc_version)
+                return [{"version": v["full_version"]} for v in versions]
+            case 'quilt':
+                versions = await get_quilt_versions(mc_version)
+                return [{"version": v["version"], "release": str(v["release"])} for v in versions]
 
     async def show_modlist(self):
         if not self.selected_modpack_version:

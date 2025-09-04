@@ -1,3 +1,5 @@
+from textual import on
+from textual.events import MouseDown
 from textual.widgets import Button, Static, Checkbox
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
@@ -70,3 +72,17 @@ class SortModal(ModalScreen[tuple[str, bool]]):
     def action_done(self):
         self.dismiss((str(self.sort_select.value), self.reverse.value))
 
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        width, height = self.size
+        if not self.grid.styles.width or not self.grid.styles.height:
+            return
+        m_width = self.grid.styles.width.value
+        m_height = self.grid.styles.height.value
+
+        mouse_x = event.screen_x
+        mouse_y = event.screen_y
+
+        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
+            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
+            self.dismiss()

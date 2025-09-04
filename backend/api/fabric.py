@@ -28,7 +28,7 @@ async def ensure_fabric_installer(installers_dir="installers") -> Path:
     await download_file(latest["url"], dest)
     return dest
 
-def list_fabric_versions(mc_version: str) -> list[dict]:
+async def get_fabric_versions(mc_version: str) -> list[dict]:
     """Return all Fabric loader versions for a given Minecraft version."""
     url = f"https://meta.fabricmc.net/v2/versions/loader/{mc_version}"
     resp = httpx.get(url)

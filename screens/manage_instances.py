@@ -1,6 +1,7 @@
 from shutil import rmtree
 from pathlib import Path
-from textual import work
+from textual import work, on
+from textual.events import MouseDown
 from textual.app import ComposeResult
 from textual.widgets import Button, DataTable, Footer, Header
 from textual.screen import Screen
@@ -8,6 +9,7 @@ from textual.containers import Horizontal
 from screens.instance_detail import InstanceDetailScreen
 from screens.new_instance import NewInstanceScreen
 from screens.delete_modal import DeleteModal
+from screens.context_menu import ContextMenu
 from textual.binding import Binding
 from backend.storage.instance import InstanceRegistry
 from helpers import CustomTable
@@ -35,6 +37,12 @@ class ManageInstancesScreen(Screen):
 
     registry: InstanceRegistry
 
+    mouse_button: int = 0
+
+    mouse_x: int = 0
+
+    mouse_y: int = 0
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
@@ -53,6 +61,7 @@ class ManageInstancesScreen(Screen):
 
     def _on_screen_resume(self) -> None:
         self.load_table()
+        self.mouse_button = 0
 
     @work
     async def load_table(self):
@@ -103,13 +112,30 @@ class ManageInstancesScreen(Screen):
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
+        if self.mouse_button == 3:
+            def context_handler(result: str | None) -> None:
+                if not result:
+                    return
+                if result == 'delete':
+                    self.action_delete()
+                    return
+                # - add more buttons
+                return
+            self.mouse_button = 0 # reset mouse_button to prevent loops
+            self.app.push_screen(ContextMenu((self.mouse_x, self.mouse_y), ['set-default', 'edit', 'delete']), context_handler)
 
-    # - show context menu on right click
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        selected_instance = str(event.row_key.value)
-        instance = self.registry.get_instance(selected_instance)
-        if instance:
-            self.app.push_screen(InstanceDetailScreen(instance))
+        if self.mouse_button == 1:
+            selected_instance = str(event.row_key.value)
+            instance = self.registry.get_instance(selected_instance)
+            if instance:
+                self.app.push_screen(InstanceDetailScreen(instance))
+
+    @on(MouseDown)
+    def on_mouse_down(self, event: MouseDown):
+        self.mouse_button = event.button
+        self.mouse_x = event.x
+        self.mouse_y = event.y
 
     def action_back(self):
         self.app.pop_screen()

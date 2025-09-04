@@ -1,3 +1,5 @@
+from textual import on
+from textual.events import MouseDown
 from textual.widgets import Label, Static, Button, Link
 from textual.app import ComposeResult
 from textual.screen import ModalScreen
@@ -25,15 +27,14 @@ class FolderModal(ModalScreen):
         self.ftp_link = ftp_link
 
     def compose(self) -> ComposeResult:
-        yield Grid(
-            Static("Instance: ", classes='folder static'),
-            Label(f"{self.instance_name}", id="instance-name", classes='folder label'),
-            Static("Folder Path:", classes='folder static'),
-            Label(f"{self.folder_path}", id="folder-path", classes='folder label'),
-            Link("Open Folder via SFTP", url=self.ftp_link, id="ftp-link", classes='folder link'),
-            Container(Button("Back", id="back", classes='folder button'), id='folder-button-container'),
-            id='dialog'
-        )
+        self.grid = Grid(id='dialog')
+        with self.grid:
+            yield Static("Instance: ", classes='folder static')
+            yield Label(f"{self.instance_name}", id="instance-name", classes='folder label')
+            yield Static("Folder Path:", classes='folder static')
+            yield Label(f"{self.folder_path}", id="folder-path", classes='folder label')
+            yield Link("Open Folder via SFTP", url=self.ftp_link, id="ftp-link", classes='folder link')
+            yield Container(Button("Back", id="back", classes='folder button'), id='folder-button-container')
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "back":
@@ -50,3 +51,18 @@ class FolderModal(ModalScreen):
                 next_widget.focus()
         except Exception as e:
             self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
+
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        width, height = self.size
+        if not self.grid.styles.width or not self.grid.styles.height:
+            return
+        m_width = self.grid.styles.width.value
+        m_height = self.grid.styles.height.value
+
+        mouse_x = event.screen_x
+        mouse_y = event.screen_y
+
+        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
+            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
+            self.dismiss()

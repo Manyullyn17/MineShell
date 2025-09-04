@@ -3,10 +3,10 @@ ModalScreen {
 }
 
 #filter-grid {
-    height: auto;
-    width: auto;
-    max-width: 50%;
-    max-height: 80%;
+    # height: 1fr;
+    # width: 1fr;
+    # max-width: 50%;
+    # max-height: 80%;
     border: panel $accent-lighten-1 80%;
     content-align: center middle;
 }

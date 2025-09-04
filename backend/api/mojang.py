@@ -5,7 +5,7 @@ from helpers import download_file
 
 CACHE_FILE = Path("version_manifest_v2.json")
 
-def fetch_manifest():
+async def fetch_manifest():
     # Fetch the Minecraft version manifest
     manifest_url = 'https://launchermeta.mojang.com/mc/game/version_manifest_v2.json'
     try:
@@ -16,9 +16,9 @@ def fetch_manifest():
             return json.loads(CACHE_FILE.read_text())
         return None
 
-def get_minecraft_versions():
+async def get_minecraft_versions():
     # Filter only full releases and extract relevant info
-    manifest = fetch_manifest()
+    manifest = await fetch_manifest()
     if not manifest:
         return [{'id': "none"}]
     

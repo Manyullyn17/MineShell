@@ -86,7 +86,7 @@ class ProgressModal(ModalScreen):
                     if dep.get("project_id") and dep.get("version_id")
                 ]
                 if self.instance.modloader in ['forge', 'neoforge']:
-                    self.mc_version_url = [version["url"] for version in get_minecraft_versions() if version["id"] == self.instance.minecraft_version][0]
+                    self.mc_version_url = [version["url"] for version in await get_minecraft_versions() if version["id"] == self.instance.minecraft_version][0]
                 status, message = await install_modpack(self.instance, self.steps, dependencies, self.progress_bar_callback, self.step_callback, self.cancel_event, self.modlist, self.mc_version_url)
             elif self.mode == 'modloader':
                 status, message = await install_modloader(self.instance, self.modloader_steps, self.progress_bar_callback, self.step_callback, self.cancel_event, self.mc_version_url)
