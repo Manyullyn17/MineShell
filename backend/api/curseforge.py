@@ -1,5 +1,5 @@
 import httpx
-from backend.api.api import SourceAPI
+from backend.api.sourceapi import SourceAPI
 
 CURSEFORGE_API = ""
 MODLOADERS = {"fabric", "forge", "quilt", "neoforge"}

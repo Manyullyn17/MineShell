@@ -1,10 +1,10 @@
 from textual.app import ComposeResult
-from textual.widgets import Button, Static, Footer, Header
-from textual.screen import Screen
-from textual.containers import Vertical, Horizontal, Grid, Center
-from screens.instance_detail import InstanceDetailScreen
-from screens.manage_instances import ManageInstancesScreen
 from textual.binding import Binding
+from textual.containers import Vertical, Horizontal, Grid, Center
+from textual.screen import Screen
+from textual.widgets import Button, Static, Footer, Header
+
+from screens import InstanceDetailScreen, ManageInstancesScreen
 
 class MainMenu(Screen):
     CSS_PATH = 'styles/main_screen.tcss'
@@ -87,7 +87,7 @@ class MainMenu(Screen):
                 self.app.push_screen(ManageInstancesScreen())
             case 'open_instance':
                 return
-                # placeholder until setting and getting default instance is implemented
+                # - placeholder until setting and getting default instance is implemented
                 # self.app.push_screen(InstanceDetailScreen(instance_name='Placeholder'))
 
     def action_focus_move(self, direction: str):

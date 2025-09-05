@@ -1,12 +1,15 @@
 from shutil import rmtree
+
 from textual.app import ComposeResult
-from textual.widgets import Button, Footer, Header, Static
-from textual.screen import Screen
-from textual.containers import Grid
 from textual.binding import Binding
+from textual.containers import Grid
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Static
+
+from screens import ModListScreen
+from screens.modals import FolderModal
+
 from backend.storage.instance import InstanceRegistry, InstanceConfig
-from screens.folder_modal import FolderModal
-from screens.mod_list import ModListScreen
 
 class InstanceDetailScreen(Screen):
     CSS_PATH = 'styles/instance_detail_screen.tcss'

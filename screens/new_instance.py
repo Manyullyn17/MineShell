@@ -1,25 +1,20 @@
 from shutil import rmtree
-from typing import Literal, cast
-from textual import on
-from textual.app import ComposeResult
-from textual.containers import Horizontal, Grid, VerticalScroll
-from textual.widgets import Button, Footer, Header, Static, Input, Select
-from textual.screen import Screen
-from textual.binding import Binding
 from pathlib import Path
 from datetime import datetime
-from screens.selector_modal import SelectorModal
-from screens.text_display_modal import TextDisplayModal
-from screens.progress_modal import ProgressModal
-from backend.api.api import SourceAPI
-from backend.api.modrinth import ModrinthAPI
-from backend.api.curseforge import CurseforgeAPI
-from backend.api.ftb import FTBAPI
-from backend.api.mojang import get_minecraft_versions
-from backend.api.fabric import get_fabric_versions
-from backend.api.forge import get_forge_versions
-from backend.api.neoforge import get_neoforge_versions
-from backend.api.quilt import get_quilt_versions
+from typing import Literal, cast
+
+from textual import on
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import Horizontal, Grid, VerticalScroll
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Static, Input, Select
+
+from screens.modals import SelectorModal, TextDisplayModal, ProgressModal
+
+from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI, FTBAPI
+from backend.api import get_minecraft_versions, get_fabric_versions, get_forge_versions, get_neoforge_versions, get_quilt_versions
+
 from backend.storage.instance import InstanceConfig
 from helpers import format_date, sanitize_filename, CustomSelect, SmartInput
 

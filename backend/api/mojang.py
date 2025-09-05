@@ -16,7 +16,7 @@ async def fetch_manifest():
             return json.loads(CACHE_FILE.read_text())
         return None
 
-async def get_minecraft_versions():
+async def get_minecraft_versions() -> list[dict]:
     # Filter only full releases and extract relevant info
     manifest = await fetch_manifest()
     if not manifest:

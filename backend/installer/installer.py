@@ -2,12 +2,16 @@ import asyncio, json, zipfile, os
 from aioshutil import rmtree, copy2, move
 from pathlib import Path
 from datetime import datetime
-from backend.storage.instance import InstanceConfig, ModEntry
+
 from backend.api.fabric import ensure_fabric_installer, run_fabric_installer
 from backend.api.forge import download_forge_installer, run_forge_installer
 from backend.api.neoforge import download_neoforge_installer, run_neoforge_installer
 from backend.api.quilt import ensure_quilt_installer, run_quilt_installer
+
+# - add other source apis
 import backend.api.modrinth as modrinth
+
+from backend.storage.instance import InstanceConfig, ModEntry
 from helpers import sanitize_filename, download_file
 
 installers_dir = Path("installers")
@@ -96,6 +100,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
     if overrides_path.exists():
         # - add getting datapacks folder path
         for folder in ['resourcepacks', 'shaderpacks']:
+            # - delete all resourcepacks and shaderpacks folders (eg in config/paxi/)
             bad_path = overrides_path / folder
             if bad_path.exists():
                 try:
@@ -113,6 +118,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         return -1, 'cancelled'
 
     # move datapacks into world folder if not there already
+    # - move datapacks where they belong...
+    # - if datapacks folder was found, set as default datapack folder
     datapacks_folder = instance_path / 'datapacks'
     if datapacks_folder.exists():
         await smooth_step_callback("Moving Datapacks into 'world' Folder")
@@ -130,6 +137,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
     if not modlist:
         await smooth_step_callback('Getting Project Ids')
         project_ids = [dep["project_id"] for dep in dependencies if dep["project_id"]]
+        # - make source agnostic
         projects = await modrinth.fetch_projects(project_ids)
         if not projects:
             return 5, 'Could not get Projects'
@@ -140,6 +148,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
         await smooth_step_callback('Getting Version Ids')
         version_ids = [dep["version_id"] for dep in dependencies if dep["project_id"] in projects]
+        # - make source agnostic
         versions = await modrinth.fetch_versions(version_ids)
         if not versions:
             return 5, 'Could not get Versions'
@@ -216,6 +225,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         return -1, 'cancelled'
 
     # get datapacks from overrides
+    # - some datapacks are in overrides and downloaded, example Daggers Fix in Prominence II
+    # datapacks get put in config/paxi/datapacks, don't know if from overrides or downloads (can't remember if i honor the path supplied or if there is one xD)
     for folder in overrides_path.rglob('datapacks'):
         if folder.is_dir():
             for datapack in folder.glob('*.zip'):

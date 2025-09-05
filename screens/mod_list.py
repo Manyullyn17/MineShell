@@ -1,16 +1,17 @@
 from typing import Literal, cast
 from datetime import datetime
+
 from textual import work
 from textual.app import ComposeResult
-from textual.widgets import Button, Static, Footer, Header, Label, DataTable
-from textual.screen import Screen
-from textual.containers import Vertical, Horizontal
 from textual.binding import Binding
-from screens.delete_modal import DeleteModal
-from screens.filter_modal import FilterModal
-from screens.sort_modal import SortModal
+from textual.containers import Vertical, Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, Static, Footer, Header, Label, DataTable, Input
+
+from screens.modals import DeleteModal, FilterModal, SortModal
+
 from backend.storage.instance import InstanceConfig, ModList
-from helpers import SmartInput, CustomTable
+from helpers import SmartInput, CustomTable, sanitize_filename
 from config import DATE_FORMAT, TIME_FORMAT
 
 class ModListScreen(Screen):
@@ -39,7 +40,7 @@ class ModListScreen(Screen):
         "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": ""}
     }
 
-    first = True
+    first_load = True
 
     selected_mod: str | None = None
 
@@ -95,17 +96,16 @@ class ModListScreen(Screen):
         self.table.loading = True
         self.mod_count.update(f'Mods: {len(self.modlist.mods)}')
         self.table.clear()
-        # self.table.columns.clear()
         columns = ['Name', 'Version', 'Type', 'Enabled', 'Source', 'Install Date']
 
-        if self.first:
+        if self.first_load:
             # Add columns
             for col_name in columns:
                 self.table.add_column(col_name, key=col_name.lower().replace(' ', '_'))
             
             # Add hidden datetime column for sorting
             self.table.add_column('datetime', width=0, key='datetime')
-            self.first = False
+            self.first_load = False
 
         if not data:
 
@@ -118,16 +118,19 @@ class ModListScreen(Screen):
 
         # Populate rows
         for mod in data:
-            row = [
-                mod['name'],
-                mod['version'],
-                mod['type'],
-                mod['enabled'],
-                mod['source'],
-                mod['formatted_date'],
-                mod['install_date'],
-            ]
-            self.table.add_row(*row, key=str(mod['mod_id']))
+            try:
+                row = [
+                    mod.get('name',''),
+                    mod.get('version',''),
+                    mod.get('type',''),
+                    mod.get('enabled',''),
+                    mod.get('source',''),
+                    mod.get('formatted_date',''),
+                    mod.get('install_date',''),
+                ]
+                self.table.add_row(*row, key=str(mod.get('mod_id','')))
+            except KeyError as e:
+                self.notify(f"Error adding Mod '{mod.get('name','')}' to Table. {e}", severity='error', timeout=5)
 
         self.sort_table(self.current_sorting)
         self.table.loading = False
@@ -148,6 +151,10 @@ class ModListScreen(Screen):
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_mod = str(event.row_key.value)
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        # - add check if selected mod = '' (No results) and do nothing
+        pass
 
     def action_focus_move(self, direction: str):
         focused = self.focused
@@ -256,3 +263,24 @@ class ModListScreen(Screen):
                 return str(value).lower()
         column, reverse = sort_map[sort_method]
         self.table.sort(*column, reverse=reverse, key=sort_key)
+
+    def on_input_changed(self, event: Input.Changed):
+        if event.input.id == 'modlist-search':
+            query = event.value
+            # call table filter function
+            self.search_table(query)
+
+    def search_table(self, query: str) -> None:
+        if not query:
+            self.load_table()
+            return
+        query = sanitize_filename(query)
+        data = self.modlist.to_dict(f'{DATE_FORMAT} {TIME_FORMAT}')
+        filtered_data: list[dict] = [
+            row for row in data
+            if sanitize_filename(str(row.get("name", ""))).startswith(query)
+        ]
+        if not filtered_data:
+            filtered_data = [{"name": "No results found"}]
+        self.load_table(filtered_data)
+

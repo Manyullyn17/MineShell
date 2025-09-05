@@ -1,16 +1,17 @@
 from shutil import rmtree
 from pathlib import Path
+
 from textual import work, on
-from textual.events import MouseDown
 from textual.app import ComposeResult
-from textual.widgets import Button, DataTable, Footer, Header
-from textual.screen import Screen
-from textual.containers import Horizontal
-from screens.instance_detail import InstanceDetailScreen
-from screens.new_instance import NewInstanceScreen
-from screens.delete_modal import DeleteModal
-from screens.context_menu import ContextMenu
 from textual.binding import Binding
+from textual.containers import Horizontal
+from textual.events import MouseDown
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header
+
+from screens import InstanceDetailScreen, NewInstanceScreen
+from screens.modals import DeleteModal, ContextMenu
+
 from backend.storage.instance import InstanceRegistry
 from helpers import CustomTable
 

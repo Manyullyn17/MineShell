@@ -1,20 +1,17 @@
 import httpx
-from backend.api.api import SourceAPI
+from backend.api.sourceapi import SourceAPI
 
 FTB_API = ""
 MODLOADERS = {"fabric", "forge", "quilt", "neoforge"}
 
 class FTBAPI(SourceAPI):
-    async def search_modpacks(self, query: str, limit: int=20) -> dict[str, str | list[str]]:
+    async def search_modpacks(self, query: str, limit=20) -> tuple[str, list[dict[str, str | list[str]]]]:
         """Search modpacks on FTB and return data for the selector modal."""
         
 
         # Return data for the modal
-        return {
-            "title": f"Select Modpack (search: {query})",
-            "rows": '',
-            "columns": '',
-        }
+        rows = []
+        return f"Select Modpack (search: {query})", rows
 
     def get_modloader_from_categories(self, categories: list[str]) -> str:
         return "Unknown"

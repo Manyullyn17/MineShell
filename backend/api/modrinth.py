@@ -1,5 +1,5 @@
 import httpx, json
-from backend.api.api import SourceAPI
+from backend.api.sourceapi import SourceAPI
 
 MODRINTH_API = "https://api.modrinth.com/v2"
 MODLOADERS = {"fabric", "forge", "quilt", "neoforge"}

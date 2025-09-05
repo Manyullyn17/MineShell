@@ -1,6 +1,6 @@
 from textual.app import App
 from textual.theme import Theme
-from screens.main_menu import MainMenu
+from screens import MainMenu
 
 deepslate_theme = Theme(
     name='deepslate',
@@ -31,8 +31,4 @@ class MineShell(App):
 
 if __name__ == '__main__':
     MineShell().run()
-
-
-# To-Do:
-# - make naming make sense and consistent
 

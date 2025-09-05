@@ -1,6 +1,5 @@
 import httpx, subprocess, os
 from pathlib import Path
-from typing import Optional
 from helpers import download_file
 
 async def get_quilt_versions(mc_version: str) -> list[dict]:

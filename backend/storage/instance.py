@@ -1,8 +1,9 @@
 import os
-from pydantic import BaseModel, ValidationError
-from typing import List, Optional, Literal, ClassVar
 from datetime import datetime
 from pathlib import Path
+from pydantic import BaseModel, ValidationError
+from typing import List, Optional, Literal, ClassVar
+
 from helpers import format_date
 from config import DATE_FORMAT
 
