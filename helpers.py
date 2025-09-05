@@ -1,8 +1,13 @@
 import unicodedata, re, httpx, aiofiles
 from datetime import datetime
 from pathlib import Path
+from typing import TypeVar
 from config import DATE_FORMAT
+from textual import on
+from textual.events import MouseDown
+from textual.widget import Widget
 from textual.widgets import Select, Input, DataTable
+from textual.screen import ModalScreen
 from textual.binding import Binding
 
 def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
@@ -103,4 +108,44 @@ class CustomTable(DataTable):
             super()._post_selected_message()
         # Fallback to normal DataTable behavior
         return super()._on_key(event)
-    
+
+ScreenResultType = TypeVar("ScreenResultType")
+
+class CustomModal(ModalScreen[ScreenResultType]):
+    main_widget: Widget | None = None
+    allow_click_outside: bool = True  # default behavior
+
+    @on(MouseDown)
+    def on_mouse_click(self, event: MouseDown):
+        if not self.allow_click_outside:
+            return  # ignore clicks outside
+
+        widget = self.get_main_widget()
+        if not widget or not widget.styles.height or not widget.styles.width:
+            return
+
+        w = widget.styles.width.value or 0
+        h = widget.styles.height.value or 0
+        if w == 0 or h == 0:
+            return
+
+        screen_w, screen_h = self.size
+        left = (screen_w - w) // 2
+        right = (screen_w + w) // 2 - 1
+        top = (screen_h - h) // 2
+        bottom = (screen_h + h) // 2 - 1
+
+        mx, my = event.screen_x, event.screen_y
+        if mx < left or mx > right or my < top or my > bottom:
+            self.dismiss()
+
+    def get_main_widget(self) -> Widget | None:
+        if self.main_widget:
+            return self.main_widget
+        
+        # pick first non-system child
+        for child in self.children:
+            if "-textual-system" not in child.classes:
+                return child
+
+        return None

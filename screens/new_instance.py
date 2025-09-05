@@ -321,7 +321,7 @@ class NewInstanceScreen(Screen):
         def install_finished(result: str | None) -> None:
                 self.query_one('#install').loading = False
                 if result == 'finished':
-                    self.app.pop_screen()
+                    self.dismiss(sanitize_filename(self.instance_name.value))
                 else:
                     if instance.path.exists():
                         rmtree(instance.path)

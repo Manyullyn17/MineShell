@@ -4,15 +4,15 @@ from aioshutil import rmtree
 from textual import work
 from textual.widgets import Label, Static, Button, ProgressBar
 from textual.app import ComposeResult
-from textual.screen import ModalScreen
 from textual.binding import Binding
 from textual.containers import Grid, Container, HorizontalGroup
 from backend.api.mojang import get_minecraft_versions
 from backend.storage.instance import InstanceConfig, InstanceRegistry
 from backend.installer.installer import install_modpack, install_modloader
 from screens.delete_modal import DeleteModal
+from helpers import CustomModal
 
-class ProgressModal(ModalScreen):
+class ProgressModal(CustomModal):
     CSS_PATH = 'styles/progress_modal.tcss'
     BINDINGS = [
             Binding('q', 'cancel', show=False),
@@ -40,6 +40,7 @@ class ProgressModal(ModalScreen):
         self.modlist = modlist
         self.mode = mode
         self.mc_version_url = mc_version_url
+        self.failed = False
 
     def compose(self) -> ComposeResult:
         self.progress_step = Label(id="progress-step", classes='progress label')
@@ -67,6 +68,8 @@ class ProgressModal(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case "cancel-install":
+                if self.failed:
+                    self.dismiss('cancelled')
                 self.cancel_event.set()
                 self.query_one('#cancel-install').disabled = True
                 self.progress_step.update('Cancelling installation...')
@@ -79,6 +82,8 @@ class ProgressModal(ModalScreen):
     @work(thread=True)
     async def start_install(self):
         try:
+            self.allow_click_outside = False
+            self.failed = False
             if self.mode == 'modpack' and self.dependencies:
                 dependencies = [
                     {"project_id": dep["project_id"], "version_id": dep["version_id"]}
@@ -108,6 +113,8 @@ class ProgressModal(ModalScreen):
                 await rmtree(instance_path, ignore_errors=True)
             self.query_one('#retry-install').disabled = False
             self.query_one('#retry-install').display = 'block'
+            self.failed = True
+            self.allow_click_outside = True
         except Exception as e:
             self.notify(f'Installation failed: {e}', severity='error', timeout=5)
             self.app.call_from_thread(self.dismiss, 'cancelled')

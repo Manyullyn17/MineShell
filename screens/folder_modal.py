@@ -1,12 +1,10 @@
-from textual import on
-from textual.events import MouseDown
 from textual.widgets import Label, Static, Button, Link
 from textual.app import ComposeResult
-from textual.screen import ModalScreen
 from textual.binding import Binding
 from textual.containers import Grid, Container
+from helpers import CustomModal
 
-class FolderModal(ModalScreen):
+class FolderModal(CustomModal):
     CSS_PATH = 'styles/folder_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
@@ -52,17 +50,3 @@ class FolderModal(ModalScreen):
         except Exception as e:
             self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
-    @on(MouseDown)
-    def on_mouse_click(self, event: MouseDown):
-        width, height = self.size
-        if not self.grid.styles.width or not self.grid.styles.height:
-            return
-        m_width = self.grid.styles.width.value
-        m_height = self.grid.styles.height.value
-
-        mouse_x = event.screen_x
-        mouse_y = event.screen_y
-
-        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
-            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
-            self.dismiss()

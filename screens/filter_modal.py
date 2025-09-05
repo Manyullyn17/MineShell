@@ -1,12 +1,12 @@
 from textual import on
-from textual.events import Resize, MouseDown
+from textual.events import Resize
 from textual.widgets import Label, Button, Collapsible, SelectionList, Static
 from textual.app import ComposeResult
-from textual.screen import ModalScreen
 from textual.binding import Binding
 from textual.containers import Grid
+from helpers import CustomModal
 
-class FilterModal(ModalScreen[dict]):
+class FilterModal(CustomModal[dict]):
     """A reusable modal to select values to filter by."""
     CSS_PATH = 'styles/filter_modal.tcss'
     BINDINGS = [
@@ -219,18 +219,3 @@ class FilterModal(ModalScreen[dict]):
         for id in self.select_ids:
             self.query_one(f'#{id}', expect_type=SelectionList).deselect_all()
         self.filters = {}
-
-    @on(MouseDown)
-    def on_mouse_click(self, event: MouseDown):
-        width, height = self.size
-        if not self.grid.styles.width or not self.grid.styles.height:
-            return
-        m_width = self.grid.styles.width.value
-        m_height = self.grid.styles.height.value
-
-        mouse_x = event.screen_x
-        mouse_y = event.screen_y
-
-        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
-            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
-            self.dismiss()

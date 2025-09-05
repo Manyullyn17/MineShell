@@ -1,13 +1,12 @@
 from packaging.version import Version, InvalidVersion
-from textual import on
-from textual.events import Resize, MouseDown
+from textual.events import Resize
 from textual.widgets import DataTable
 from textual.app import ComposeResult
-from textual.screen import ModalScreen
 from textual.binding import Binding
 from screens.filter_modal import FilterModal
+from helpers import CustomModal
 
-class SelectorModal(ModalScreen[str]):
+class SelectorModal(CustomModal[str]):
     """A reusable modal that can show a list of values with optional extra info."""
     CSS_PATH = 'styles/selector_modal.tcss'
     BINDINGS = [
@@ -120,17 +119,3 @@ class SelectorModal(ModalScreen[str]):
                     return v
             self.table.sort(self.sort_column, key=lambda r: version_key(r) ,reverse=self.sort_reverse)
 
-    @on(MouseDown)
-    def on_mouse_click(self, event: MouseDown):
-        width, height = self.size
-        if not self.table.styles.width or not self.table.styles.height:
-            return
-        m_width = self.table.styles.width.value
-        m_height = self.table.styles.height.value
-
-        mouse_x = event.screen_x
-        mouse_y = event.screen_y
-
-        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
-            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
-            self.dismiss()

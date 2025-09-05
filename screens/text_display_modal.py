@@ -1,12 +1,11 @@
-from textual import on
-from textual.events import Resize, MouseDown
-from textual.screen import ModalScreen
+from textual.events import Resize
 from textual.containers import Grid, VerticalScroll
-from textual.widgets import Label, Button, Static
+from textual.widgets import Button, Static
 from textual.binding import Binding
 from rich.markdown import Markdown
+from helpers import CustomModal
 
-class TextDisplayModal(ModalScreen[str | None]):
+class TextDisplayModal(CustomModal[str | None]):
     """General-purpose scrollable text modal.
 
     Args:
@@ -73,18 +72,3 @@ class TextDisplayModal(ModalScreen[str | None]):
     def on_button_pressed(self, event: Button.Pressed):
         if event.button.id == "tdm-close":
             self.dismiss(None)
-
-    @on(MouseDown)
-    def on_mouse_click(self, event: MouseDown):
-        width, height = self.size
-        if not self.grid.styles.width or not self.grid.styles.height:
-            return
-        m_width = self.grid.styles.width.value
-        m_height = self.grid.styles.height.value
-
-        mouse_x = event.screen_x
-        mouse_y = event.screen_y
-
-        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
-            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
-            self.dismiss()

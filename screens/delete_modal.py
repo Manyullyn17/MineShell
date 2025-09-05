@@ -1,12 +1,11 @@
-from textual import events, on
-from textual.events import MouseDown
+from textual import events
 from textual.app import ComposeResult
 from textual.widgets import Button, Label
-from textual.screen import ModalScreen
 from textual.containers import Grid
 from textual.binding import Binding
+from helpers import CustomModal
 
-class DeleteModal(ModalScreen[bool]):
+class DeleteModal(CustomModal[bool]):
     CSS_PATH = 'styles/delete_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
@@ -47,17 +46,3 @@ class DeleteModal(ModalScreen[bool]):
     def action_back(self):
         self.app.pop_screen()
 
-    @on(MouseDown)
-    def on_mouse_click(self, event: MouseDown):
-        width, height = self.size
-        if not self.grid.styles.width or not self.grid.styles.height:
-            return
-        m_width = self.grid.styles.width.value
-        m_height = self.grid.styles.height.value
-
-        mouse_x = event.screen_x
-        mouse_y = event.screen_y
-
-        if (mouse_x < (width - m_width) // 2 or mouse_x > (width + m_width) // 2
-            or mouse_y < (height - m_height) // 2 or mouse_y > (height + m_height) // 2):
-            self.dismiss()

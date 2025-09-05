@@ -60,6 +60,7 @@ class ManageInstancesScreen(Screen):
         self.registry = InstanceRegistry.load()
 
     def _on_screen_resume(self) -> None:
+        self.registry = InstanceRegistry.load() # reload registry
         self.load_table()
         self.mouse_button = 0
 
@@ -77,8 +78,6 @@ class ManageInstancesScreen(Screen):
         # Add hidden datetime column for sorting
         self.table.add_column('datetime', width=0)
 
-        self.registry = InstanceRegistry.load() # reload registry
-
         # If registry is empty, just show an empty table
         if not self.registry.instances:
             self.table.loading = False
@@ -95,8 +94,10 @@ class ManageInstancesScreen(Screen):
                 instance.created or ''
             ]
             self.table.add_row(*row, key=instance.instance_id)
-
-        row_index = self.table.get_row_index(self.selected_instance) if self.selected_instance else None
+        try:
+            row_index = self.table.get_row_index(self.selected_instance) if self.selected_instance else None
+        except:
+            row_index = 0
         if row_index: # doesn't run if row_index is 0 or None but it auto selects first row anyway
             self.table.move_cursor(row=row_index)
 
@@ -108,7 +109,15 @@ class ManageInstancesScreen(Screen):
             case 'back':
                 self.app.pop_screen()
             case 'new_instance':
-                self.app.push_screen(NewInstanceScreen())
+                def instance_created(instance_id: str | None) -> None:
+                    if not instance_id:
+                        return
+                    # reload registry
+                    self.registry = InstanceRegistry.load()
+                    self.selected_instance = instance_id
+                    # open Instance Detail Screen for new Instance
+                    self.open_instance(instance_id)
+                self.app.push_screen(NewInstanceScreen(), instance_created)
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
@@ -127,9 +136,7 @@ class ManageInstancesScreen(Screen):
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if self.mouse_button == 1:
             selected_instance = str(event.row_key.value)
-            instance = self.registry.get_instance(selected_instance)
-            if instance:
-                self.app.push_screen(InstanceDetailScreen(instance))
+            self.open_instance(selected_instance)
 
     @on(MouseDown)
     def on_mouse_down(self, event: MouseDown):
@@ -170,11 +177,25 @@ class ManageInstancesScreen(Screen):
     def delete_instance(self):
         self.registry = InstanceRegistry.load()
         if self.selected_instance:
-            self.registry.remove_instance(self.selected_instance)
-            try:
-                rmtree(Path('instances') / self.selected_instance)
-            except:
-                self.notify('Could not delete instance files.', severity='error', timeout=5)
+            instance = self.registry.get_instance(self.selected_instance)
+            if not instance:
+                self.notify('Could not find instance.', severity='error', timeout=5)
+                self.load_table()
                 return
+            
+            self.registry.remove_instance(self.selected_instance)
+            if instance.path.exists():
+                try:
+                    rmtree(Path('instances') / self.selected_instance)
+                except:
+                    self.notify('Could not delete instance files.', severity='error', timeout=5)
+                    return
+            else:
+                self.notify('Could not find instance files.', severity='error', timeout=5)
             self.registry.save()
             self.load_table()
+
+    def open_instance(self, instance_id: str):
+        instance = self.registry.get_instance(instance_id)
+        if instance:
+            self.app.push_screen(InstanceDetailScreen(instance))
