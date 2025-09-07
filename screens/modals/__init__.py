@@ -10,6 +10,7 @@ __all__ = [
     "SelectorModal",
     "SortModal",
     "TextDisplayModal",
+    "ModBrowserModal",
 ]
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from .selector_modal import SelectorModal
     from .sort_modal import SortModal
     from .text_display_modal import TextDisplayModal
+    from .modbrowser_modal import ModBrowserModal
 
 # Map attribute names to their modules
 _lazy_map = {
@@ -32,6 +34,7 @@ _lazy_map = {
     "SelectorModal": ".selector_modal",
     "SortModal": ".sort_modal",
     "TextDisplayModal": ".text_display_modal",
+    "ModBrowserModal": ".modbrowser_modal",
 }
 
 def __getattr__(name: str):

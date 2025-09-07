@@ -8,7 +8,7 @@ from textual.containers import Vertical, Horizontal
 from textual.screen import Screen
 from textual.widgets import Button, Static, Footer, Header, Label, DataTable, Input
 
-from screens.modals import DeleteModal, FilterModal, SortModal
+from screens.modals import DeleteModal, FilterModal, SortModal, ModBrowserModal
 
 from backend.storage.instance import InstanceConfig, ModList
 from helpers import SmartInput, CustomTable, sanitize_filename
@@ -69,7 +69,6 @@ class ModListScreen(Screen):
                     yield Static(classes='modlist info spacer')
                 self.mod_count = Label(f'Mods: {len(self.modlist.mods)}', id='modlist-mod-count', classes='modlist info')
                 yield self.mod_count
-                # how does reactivity work? can i just update the number and it updates somehow?
 
             with Horizontal(id='modlist-buttons'):
                 yield SmartInput(placeholder='Search Modlist', id='modlist-search', classes='modlist search')
@@ -189,6 +188,7 @@ class ModListScreen(Screen):
     
     def action_add_mods(self):
         # - open mod browser screen/modal, needs implementing
+        self.app.push_screen(ModBrowserModal())
         return
 
     def action_filter(self):
