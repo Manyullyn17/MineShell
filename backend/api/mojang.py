@@ -17,6 +17,7 @@ async def fetch_manifest():
         return None
 
 async def get_minecraft_versions() -> list[dict]:
+    # - add better caching with expiration so it only fetches once a day or so but uses old cache if fetch fails
     # Filter only full releases and extract relevant info
     manifest = await fetch_manifest()
     if not manifest:

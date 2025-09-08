@@ -1,14 +1,17 @@
 import asyncio
 from pathlib import Path
 from aioshutil import rmtree
+
 from textual import work
-from textual.widgets import Label, Static, Button, ProgressBar
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Container, HorizontalGroup
+from textual.widgets import Label, Static, Button, ProgressBar
+
 from backend.api.mojang import get_minecraft_versions
 from backend.storage.instance import InstanceConfig, InstanceRegistry
 from backend.installer.installer import install_modpack, install_modloader
+
 from screens.modals import DeleteModal
 from helpers import CustomModal
 

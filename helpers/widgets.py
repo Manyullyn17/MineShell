@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import TypeVar, Protocol, Any
 
 from textual import on
 from textual.binding import Binding
@@ -111,3 +111,30 @@ class CustomModal(ModalScreen[ScreenResultType]):
                 return child
 
         return None
+
+class FocusableScreen(Protocol):
+    focused: Widget
+    navigation_map: dict[str, dict[str, str]]
+    def query_one(self, query: str, **kwargs: Any) -> Widget: ...
+    def notify(self, message: str, **kwargs: Any) -> None: ...
+
+class FocusNavigationMixin:
+    BINDINGS = [
+        Binding("up", "focus_move('up')", show=False),
+        Binding("down", "focus_move('down')", show=False),
+        Binding("left", "focus_move('left')", show=False),
+        Binding("right", "focus_move('right')", show=False),
+    ]
+
+    # - add saving of previous focused widget to return to if pressing opposite direction
+    def action_focus_move(self: FocusableScreen, direction: str):
+        focused = self.focused
+        if not focused or not focused.id:
+            return
+        try:
+            next_id = self.navigation_map.get(focused.id, {}).get(direction)
+            if next_id:
+                next_widget = self.query_one(f'#{next_id}')
+                next_widget.focus()
+        except Exception as e:
+            self.notify(f"Failed to move focus. {e}", severity="error", timeout=5)

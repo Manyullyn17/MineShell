@@ -1,7 +1,7 @@
 from shutil import rmtree
 from pathlib import Path
 from datetime import datetime
-from typing import Literal, cast
+from typing import cast
 
 from textual import on
 from textual.app import ComposeResult
@@ -16,19 +16,15 @@ from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI, FTBAPI
 from backend.api import get_minecraft_versions, get_fabric_versions, get_forge_versions, get_neoforge_versions, get_quilt_versions
 
 from backend.storage.instance import InstanceConfig
-from helpers import format_date, sanitize_filename, CustomSelect, SmartInput
+from helpers import format_date, sanitize_filename, ModloaderType, CustomSelect, SmartInput, FocusNavigationMixin
 
-class NewInstanceScreen(Screen):
+class NewInstanceScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/new_instance_screen.tcss'
     BINDINGS = [
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('i', 'install', 'Install'),
-        Binding('up', "focus_move('up')", show=False),
-        Binding('down', "focus_move('down')", show=False),
-        Binding('left', "focus_move('left')", show=False),
-        Binding('right', "focus_move('right')", show=False),
-    ]
+    ] + FocusNavigationMixin.BINDINGS
 
     navigation_map_modpack = {
         "source_select":        {"left":"",                     "up": "",                   "down": "project_input",        "right": "search_button"},
@@ -99,7 +95,7 @@ class NewInstanceScreen(Screen):
 
     selected_minecraft_version: dict = {}
 
-    selected_modloader: Literal["fabric", "forge", "neoforge", "quilt"]
+    selected_modloader: ModloaderType
 
     selected_modloader_version: str = ''
 
@@ -181,6 +177,8 @@ class NewInstanceScreen(Screen):
 
     def on_mount(self) -> None:
         self.sub_title = 'New Instance'
+        # hide modloader widgets initially
+        self.query('.modloader').add_class('hidden')
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
@@ -211,6 +209,7 @@ class NewInstanceScreen(Screen):
 
     async def open_modpack_selector(self, query: str):
         # - get limit from settings, add way to load more
+        # - somehow open modal before loading so it doesn't feel frozen?
         title, data = await self.source_api.search_modpacks(query, limit=20)
 
         if not title or not data:
@@ -253,19 +252,6 @@ class NewInstanceScreen(Screen):
     def action_install(self):
         self.install()
 
-    def action_focus_move(self, direction: str):
-        navigation_map = self.navigation_map_modpack if self.install_mode == 'modpack' else self.navigation_map_modloader
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
-
     @on(Select.Changed)
     def select_changed(self, event: Select.Changed) -> None:
         match event.select.id:
@@ -292,25 +278,21 @@ class NewInstanceScreen(Screen):
                     if source["notify"]:
                         self.notify(source["notify"], severity='information', timeout=5)
             case 'modloader_selector':
-                self.selected_modloader = cast(Literal["fabric", "forge", "neoforge", "quilt"], str(event.value).lower())
+                self.selected_modloader = cast(ModloaderType, str(event.value).lower())
 
     def set_install_mode(self, mode: str):
         if mode == 'modpack':
             self.install_mode = 'modpack'
+            self.navigation_map = self.navigation_map_modpack
             # Hide modloader widgets, show modpack widgets
-            for widget in self.query(".modloader"):
-                widget.display = "none"
-
-            for widget in self.query(".modpack"):
-                widget.display = "block"
+            self.query('.modloader').add_class('hidden')
+            self.query('.modpack').remove_class('hidden')
         else:
             self.install_mode = 'modloader'
+            self.navigation_map = self.navigation_map_modloader
             # Hide modpack widgets, show modloader widgets
-            for widget in self.query(".modloader"):
-                widget.display = "block"
-
-            for widget in self.query(".modpack"):
-                widget.display = "none"
+            self.query('.modpack').add_class('hidden')
+            self.query('.modloader').remove_class('hidden')
 
     def install(self):
         def install_finished(result: str | None) -> None:
@@ -513,7 +495,6 @@ class NewInstanceScreen(Screen):
                 versions = await get_fabric_versions(mc_version)
                 return [{"version": v["version"], "stable": str(v["stable"])} for v in versions]
             case 'forge':
-                # - sorting is ascending, should be descending
                 versions = await get_forge_versions(mc_version)
                 return [{"version": v["forge_version"]} for v in versions]
             case 'neoforge':

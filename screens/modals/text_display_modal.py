@@ -1,8 +1,10 @@
-from textual.events import Resize
-from textual.containers import Grid, VerticalScroll
-from textual.widgets import Button, Static
+from textual import on
 from textual.binding import Binding
+from textual.containers import Grid, VerticalScroll
+from textual.events import Resize
+from textual.widgets import Button, Static
 from rich.markdown import Markdown
+
 from helpers import CustomModal
 
 class TextDisplayModal(CustomModal[str | None]):
@@ -21,12 +23,12 @@ class TextDisplayModal(CustomModal[str | None]):
         Binding('escape', 'back', show=False),
     ]
 
-    def __init__(self, title: str, text: str, width: int = 0, height: int = 0, markdown: bool = True) -> None:
+    def __init__(self, title: str, text: str, fixed_width: int = 0, fixed_height: int = 0, markdown: bool = True) -> None:
         super().__init__()
         self._title = title
         self._text = text
-        self._width = width
-        self._height = height
+        self.fixed_width = fixed_width
+        self.fixed_height = fixed_height
         self._markdown = markdown
         self.longest = 0
         self.lines = 0
@@ -50,21 +52,20 @@ class TextDisplayModal(CustomModal[str | None]):
             yield Button("Close", id="tdm-close")
 
     def on_mount(self):
-        grid = self.query_one("#tdm-grid")
-        if self._width:
-            grid.styles.width = self._width
-        if self._height:
-            grid.styles.height = self._height
+        if self.fixed_width:
+            self.grid.styles.width = self.fixed_width
+        if self.fixed_height:
+            self.grid.styles.height = self.fixed_height
         self.grid.border_title = self._title
         # focus the scroll view so the mouse wheel / arrows work immediately
         self.query_one("#tdm-scroll").focus()
 
-    def _on_resize(self, event: Resize):
-        if not self._width:
+    @on(Resize)
+    def on_resize(self, event: Resize):
+        if not self.fixed_width:
             self.grid.styles.width = max(min(int(self.size.width * 0.8), self.longest + 12), 10)
-        if not self._height:
+        if not self.fixed_height:
             self.grid.styles.height = min(int(self.size.height * 0.8), self.lines + 10)
-        return super()._on_resize(event)
 
     def action_back(self):
         self.dismiss(None)

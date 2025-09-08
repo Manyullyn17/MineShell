@@ -11,12 +11,8 @@ Screen {
     margin: 1 0 0 0;
 }
 
-.modloader {
-    display: none; # default hide
-}
-
-.modpack {
-    display: block; # default show
+.hidden {
+    display: none;
 }
 
 #spacer1 {

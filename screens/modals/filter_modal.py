@@ -1,23 +1,22 @@
+from packaging.version import Version, InvalidVersion
+
 from textual import on
-from textual.events import Resize
-from textual.widgets import Label, Button, Collapsible, SelectionList, Static
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid
-from helpers import CustomModal
+from textual.events import Resize
+from textual.widgets import Label, Button, Collapsible, SelectionList, Static
 
-class FilterModal(CustomModal[dict]):
+from helpers import CustomModal, FocusNavigationMixin
+
+class FilterModal(FocusNavigationMixin, CustomModal[dict]):
     """A reusable modal to select values to filter by."""
     CSS_PATH = 'styles/filter_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'esc', show=False),
-            Binding('up', "focus_move('up')", show=False),
-            Binding('down', "focus_move('down')", show=False),
-            Binding('left', "focus_move('left')", show=False),
-            Binding('right', "focus_move('right')", show=False),
             Binding('r', "reset", show=False),
-        ]
+        ] + FocusNavigationMixin.BINDINGS
 
     first_open = True
 
@@ -38,9 +37,9 @@ class FilterModal(CustomModal[dict]):
         self.grid.styles.grid_size_rows = rows
         self.grid.styles.grid_size_columns = 2
         longest = max(len(max(self.filter_columns, key=len)), 7)
-        self.grid.styles.grid_columns = f'{longest+2} 1fr'
-        row_size = " auto"*(len(self.filter_columns))
-        self.grid.styles.grid_rows = f'{row_size} 1fr 4'
+        self.grid.styles.grid_columns = f'{longest + 2} 1fr' # +2 for padding
+        row_size = ['auto'] * len(self.filter_columns) + ['1fr', '4']
+        self.grid.styles.grid_rows = ' '.join(row_size)
 
         self.grid.border_title = 'Filter Table'
         self.grid.border_subtitle = 'r to reset'
@@ -63,6 +62,13 @@ class FilterModal(CustomModal[dict]):
                 return (0, tuple(map(int, v.split("."))))
             else:
                 return (1, v.lower())  # alphabetical for text
+        
+        # - might be better?
+        def version_key(v: str):
+                try:
+                    return Version(v)
+                except InvalidVersion:
+                    return (1, v.lower())
 
         self.collapsible_ids = []
         for column in self.filter_columns:
@@ -92,14 +98,12 @@ class FilterModal(CustomModal[dict]):
             if i == 0:
                 nav["up"] = ""
             else:
-                # nav["up"] = self.select_ids[i - 1]
                 nav["up"] = self.collapsible_ids[i - 1]
 
             # Down
             if i == len(self.select_ids) - 1:
                 nav["down"] = 'filter-done-button'
             else:
-                # nav["down"] = self.select_ids[i + 1]
                 nav["down"] = self.collapsible_ids[i + 1]
 
             self.navigation_map[select_id] = nav
@@ -111,11 +115,11 @@ class FilterModal(CustomModal[dict]):
         self.grid.mount(Button('Back', id='filter-back-button', classes='filter button'))
         self.grid.mount(Button('Done', id='filter-done-button', classes='filter button'))
 
-    def _on_resize(self, event: Resize):
+    @on(Resize)
+    def on_resize(self, event: Resize):
         self.resize_selectionlist()
         self.grid.styles.width = int(self.size.width * 0.5)
         self.grid.styles.height = int(self.size.height * 0.8)
-        return super()._on_resize(event)
 
     def resize_selectionlist(self):
         total_rows_height = len(self.filter_columns) * 3 + 4 # number of collapsibles * collapsed height + button row height

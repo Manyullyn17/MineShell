@@ -77,6 +77,8 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     await smooth_step_callback(f'Checking for {instance.formatted_modloader()} installer')
     installer_jar = await get_server_installer(instance)
+    if installer_jar is None or isinstance(installer_jar, Exception):
+        return 3, 'Could not get installer'
     progress_bar_callback(total=100, progress=50, step=3)
 
     if cancel_event.is_set():
@@ -84,7 +86,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
 
     await smooth_step_callback(f'Running {instance.formatted_modloader()} installer')
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
-    if result != 0:
+    if result != 0 or isinstance(result, Exception):
         return 3, str(result)
     progress_bar_callback(total=100, progress=100, step=3)
     await asyncio.sleep(0.1)
@@ -306,6 +308,8 @@ async def install_modloader(instance: InstanceConfig, steps: list[str], progress
     await smooth_step_callback(f'Checking for {instance.formatted_modloader()} installer')
     # - untested, should work
     installer_jar = await get_server_installer(instance)
+    if installer_jar is None or isinstance(installer_jar, Exception):
+        return 1, 'Could not get installer'
     progress_bar_callback(total=100, progress=100)
     progress_bar_callback(total=100, progress=33, bar_id=0)
     await asyncio.sleep(0.1)
@@ -319,7 +323,7 @@ async def install_modloader(instance: InstanceConfig, steps: list[str], progress
     # - untested, should work
     result = await install_server(Path("instances") / instance.instance_id, installer_jar, instance.modloader, mc_version, loader_version, mc_version_url)
 
-    if result != 0:
+    if result != 0 or isinstance(result, Exception):
         return 2, str(result)
     progress_bar_callback(total=100, progress=100)
     progress_bar_callback(total=100, progress=66, bar_id=0)
@@ -409,7 +413,7 @@ async def copytree_with_progress(
 async def get_modloader_version(source: str, extract_path: Path) -> str | None:
     match source:
         case 'modrinth':
-            with open(extract_path / 'modrinth.index.json', 'r') as f:
+            with open(extract_path / 'modrinth.index.json', 'r', encoding='utf-8') as f:
                 return next((version for key, version in json.load(f)["dependencies"].items() if key.lower() != "minecraft"), None)
         # - if api has info, remove
         case "curseforge":
@@ -423,27 +427,33 @@ async def get_modloader_version(source: str, extract_path: Path) -> str | None:
                         return loader_id.split("-", 1)[1] if "-" in loader_id else loader_id
 
 async def get_server_installer(instance: InstanceConfig):
-    match instance.modloader:
-        case 'fabric':
-            return await ensure_fabric_installer()
-        case 'forge':
-            return await download_forge_installer(instance.minecraft_version, str(instance.modloader_version))
-        case 'neoforge':
-            return await download_neoforge_installer(instance.minecraft_version, str(instance.modloader_version))
-        case 'quilt':
-            return await ensure_quilt_installer()
+    try:
+        match instance.modloader:
+            case 'fabric':
+                return await ensure_fabric_installer()
+            case 'forge':
+                return await download_forge_installer(instance.minecraft_version, str(instance.modloader_version))
+            case 'neoforge':
+                return await download_neoforge_installer(instance.minecraft_version, str(instance.modloader_version))
+            case 'quilt':
+                return await ensure_quilt_installer()
+    except Exception as e:
+        return e
 
 async def install_server(install_dir: Path, installer_path: Path, modloader: str, mc_version: str, loader_version: str | None, mc_version_url: str | None):
-    match modloader:
-        case 'fabric':
-            return await run_fabric_installer(install_dir, installer_path, mc_version, loader_version)
-        case 'forge':
-            if mc_version_url is None:
-                return -1
-            return await run_forge_installer(install_dir, installer_path, mc_version_url)
-        case 'neoforge':
-            if mc_version_url is None:
-                return -1
-            return await run_neoforge_installer(install_dir, installer_path, mc_version_url)
-        case 'quilt':
-            return await run_quilt_installer(install_dir, installer_path, mc_version, str(loader_version))
+    try:
+        match modloader:
+            case 'fabric':
+                return await run_fabric_installer(install_dir, installer_path, mc_version, loader_version)
+            case 'forge':
+                if mc_version_url is None:
+                    return -1
+                return await run_forge_installer(install_dir, installer_path, mc_version_url)
+            case 'neoforge':
+                if mc_version_url is None:
+                    return -1
+                return await run_neoforge_installer(install_dir, installer_path, mc_version_url)
+            case 'quilt':
+                return await run_quilt_installer(install_dir, installer_path, mc_version, str(loader_version))
+    except Exception as e:
+        return e

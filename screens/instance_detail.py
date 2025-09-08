@@ -1,8 +1,10 @@
 from shutil import rmtree
 
+from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid
+from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Static
 
@@ -10,19 +12,16 @@ from screens import ModListScreen
 from screens.modals import FolderModal
 
 from backend.storage.instance import InstanceRegistry, InstanceConfig
+from helpers import FocusNavigationMixin
 
-class InstanceDetailScreen(Screen):
+class InstanceDetailScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/instance_detail_screen.tcss'
     BINDINGS = [
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('s', 'start_stop', 'Start/Stop'),
         ('r', 'restart', 'Restart'),
-        Binding('up', "focus_move('up')", show=False),
-        Binding('down', "focus_move('down')", show=False),
-        Binding('left', "focus_move('left')", show=False),
-        Binding('right', "focus_move('right')", show=False),
-    ]
+    ] + FocusNavigationMixin.BINDINGS
 
     navigation_map = {
         "start_stop":   {"left":"settings",     "up": "configs",    "down": "configs",      "right": "restart"},
@@ -91,18 +90,18 @@ class InstanceDetailScreen(Screen):
         self.status_interval = self.set_interval(10, self.update_status)
         self.call_later(self.update_status)
 
-    def _on_screen_resume(self) -> None:
+    @on(ScreenResume)
+    def on_screen_resume(self, event: ScreenSuspend) -> None:
         if self.status_interval is None:
             self.status_interval = self.set_interval(10, self.update_status)
             self.call_later(self.update_status)
-        return super()._on_screen_resume()
-    
-    def _on_screen_suspend(self) -> None:
+
+    @on(ScreenSuspend)
+    def on_screen_suspend(self, event: ScreenSuspend) -> None:
         if self.status_interval:
             self.status_interval.stop()
             self.status_interval = None
-        return super()._on_screen_suspend()
-
+    
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case 'start_stop':
@@ -139,18 +138,6 @@ class InstanceDetailScreen(Screen):
 
     def action_restart(self): # implement
         print('restart')
-
-    def action_focus_move(self, direction: str):
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     async def update_status(self):
         # - actually get status dynamically

@@ -5,7 +5,7 @@ from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.events import MouseDown
+from textual.events import MouseDown, ScreenResume
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Footer, Header
 
@@ -13,20 +13,16 @@ from screens import InstanceDetailScreen, NewInstanceScreen
 from screens.modals import DeleteModal, ContextMenu
 
 from backend.storage.instance import InstanceRegistry
-from helpers import CustomTable
+from helpers import CustomTable, FocusNavigationMixin
 
-class ManageInstancesScreen(Screen):
+class ManageInstancesScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/manage_instances_screen.tcss'
     BINDINGS = [
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('n', 'new_instance', 'New Instance'),
         ('d', 'delete', 'Delete'),
-        Binding('up', "focus_move('up')", show=False),
-        Binding('down', "focus_move('down')", show=False),
-        Binding('left', "focus_move('left')", show=False),
-        Binding('right', "focus_move('right')", show=False),
-    ]
+    ] + FocusNavigationMixin.BINDINGS
 
     navigation_map = {
             "instances_list":   {"left":"",                 "up": "",               "down": "new_instance", "right": "new_instance"},
@@ -60,7 +56,8 @@ class ManageInstancesScreen(Screen):
         self.sub_title = 'Manage Instances'
         self.registry = InstanceRegistry.load()
 
-    def _on_screen_resume(self) -> None:
+    @on(ScreenResume)
+    def on_screen_resume(self, event: ScreenResume) -> None:
         self.registry = InstanceRegistry.load() # reload registry
         self.load_table()
         self.mouse_button = 0
@@ -122,7 +119,7 @@ class ManageInstancesScreen(Screen):
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
-        if self.mouse_button == 3:
+        if self.mouse_button == 3: # right click
             def context_handler(result: str | None) -> None:
                 if not result:
                     return
@@ -135,7 +132,8 @@ class ManageInstancesScreen(Screen):
             self.app.push_screen(ContextMenu((self.mouse_x, self.mouse_y), ['set-default', 'edit', 'delete']), context_handler)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        if self.mouse_button == 1:
+        # - this blocks enter key from working
+        if self.mouse_button == 1: # left click
             selected_instance = str(event.row_key.value)
             self.open_instance(selected_instance)
 
@@ -162,18 +160,6 @@ class ManageInstancesScreen(Screen):
         if not self.selected_instance:
             return
         self.app.push_screen(DeleteModal(), check_delete)
-
-    def action_focus_move(self, direction: str):
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def delete_instance(self):
         self.registry = InstanceRegistry.load()

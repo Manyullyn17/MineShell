@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional, Literal, ClassVar
 
-from helpers import format_date
+from helpers import format_date, ModloaderType
 from config import DATE_FORMAT
 
 # ----------------------------
@@ -118,7 +118,7 @@ class InstanceConfig(BaseModel):
     name: str # display name of the instance
     install_date: datetime # instance creation time
     minecraft_version: str
-    modloader: Literal["fabric", "forge", "neoforge", "quilt"]
+    modloader: ModloaderType
     modloader_version: Optional[str] = None
     modpack_name: Optional[str] = None
     modpack_id: Optional[str] = None # slug for modrinth, project id for curseforge and ftb
@@ -126,6 +126,8 @@ class InstanceConfig(BaseModel):
     modpack_version: Optional[str] = None # modpack version number
     modpack_date: Optional[datetime] = None # release date of current modpack version
     modpack_source: Literal['modrinth', 'curseforge', 'ftb', 'modloader'] = 'modloader' # None if modloader only
+    # - need to set source when creating instance, what do for modloader only instances?
+    source_api: Literal['modrinth', 'curseforge'] = 'modrinth'
     jvm_args: List[str] = []
     java_version: Optional[str] = None
     memory_min: Optional[int] = None
@@ -202,7 +204,7 @@ class InstanceSummary(BaseModel):
     status: Literal["stopped", "running", "starting"] = "stopped"
     created: datetime | None = None
     pack_version: str | None = None
-    modloader: Literal["fabric", "forge", "neoforge", "quilt"] | None = None
+    modloader: ModloaderType | None = None
     minecraft_version: str | None = None
     datapacks_folder: Path = Path("world") / "datapacks"
     path: Path | None = None  # path to instance folder
@@ -248,7 +250,7 @@ class InstanceRegistry(BaseModel):
         status: Literal["stopped", "running", "starting"] = "stopped",
         created: datetime | None = None,
         pack_version: str | None = None,
-        modloader: Literal["fabric", "forge", "neoforge", "quilt"] | None = None,
+        modloader: ModloaderType | None = None,
         minecraft_version: str | None = None,
         path: Path | None = None
     ):

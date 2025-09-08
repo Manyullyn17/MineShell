@@ -1,8 +1,11 @@
 import unicodedata, re, httpx, aiofiles
 from pathlib import Path
 from datetime import datetime
+from typing import Literal
 
 from config import DATE_FORMAT
+
+ModloaderType = Literal["fabric", "forge", "neoforge", "quilt"]
 
 def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
     """Convert an ISO8601 datetime string (from Mojang API) into the global DATE_FORMAT."""

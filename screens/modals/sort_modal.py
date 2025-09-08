@@ -1,26 +1,23 @@
-from textual.widgets import Button, Static, Checkbox
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid
-from helpers import CustomSelect, CustomModal
+from textual.widgets import Button, Static, Checkbox
 
-class SortModal(CustomModal[tuple[str, bool]]):
+from helpers import CustomSelect, CustomModal, FocusNavigationMixin
+
+class SortModal(FocusNavigationMixin, CustomModal[tuple[str, bool]]):
     """A reusable modal to select values to sort by."""
     CSS_PATH = 'styles/sort_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'esc', show=False),
-            Binding('up', "focus_move('up')", show=False),
-            Binding('down', "focus_move('down')", show=False),
-            Binding('left', "focus_move('left')", show=False),
-            Binding('right', "focus_move('right')", show=False),
-        ]
+        ] + FocusNavigationMixin.BINDINGS
     
     navigation_map = {
-        "sort-select":      {"left": "",                         "up": "",  "down": "modlist-table", "right": "modlist-filter-button"},
-        "sort-reverse":     {"left": "modlist-search",           "up": "",  "down": "modlist-table", "right": "modlist-sort-button"},
-        "sort-back-button": {"left": "modlist-filter-button",    "up": "",  "down": "modlist-table", "right": "modlist-update-button"},
-        "sort-done-button": {"left": "modlist-sort-button",      "up": "",  "down": "modlist-table", "right": "modlist-add-mod-button"},
+        "sort-select":      {"left": "", "up": "", "down": "sort-reverse",     "right": ""},
+        "sort-reverse":     {"left": "", "up": "", "down": "sort-done-button", "right": ""},
+        "sort-back-button": {"left": "", "up": "", "down": "",                 "right": "sort-done-button"},
+        "sort-done-button": {"left": "sort-back-button", "up": "", "down": "", "right": ""},
     }
 
     def __init__(self, sortable_columns:list[str]):
@@ -50,18 +47,6 @@ class SortModal(CustomModal[tuple[str, bool]]):
                 self.action_back()
             case 'sort-done-button':
                 self.action_done()
-
-    def action_focus_move(self, direction: str):
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def action_back(self):
         self.dismiss()

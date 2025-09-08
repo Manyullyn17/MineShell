@@ -11,10 +11,10 @@ from textual.widgets import Button, Static, Footer, Header, Label, DataTable, In
 from screens.modals import DeleteModal, FilterModal, SortModal, ModBrowserModal
 
 from backend.storage.instance import InstanceConfig, ModList
-from helpers import SmartInput, CustomTable, sanitize_filename
+from helpers import SmartInput, CustomTable, sanitize_filename, FocusNavigationMixin
 from config import DATE_FORMAT, TIME_FORMAT
 
-class ModListScreen(Screen):
+class ModListScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/mod_list_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
@@ -24,11 +24,7 @@ class ModListScreen(Screen):
         Binding('a', "add_mods", "Add Mods", show=True),
         Binding('f', "filter", "Filter", show=True),
         Binding('s', "sort", "Sort", show=True),
-        Binding('up', "focus_move('up')", show=False),
-        Binding('down', "focus_move('down')", show=False),
-        Binding('left', "focus_move('left')", show=False),
-        Binding('right', "focus_move('right')", show=False),
-    ]
+    ] + FocusNavigationMixin.BINDINGS
 
     navigation_map = {
         "modlist-search":           {"left": "",                         "up": "",  "down": "modlist-table", "right": "modlist-filter-button"},
@@ -37,7 +33,7 @@ class ModListScreen(Screen):
         "modlist-update-button":    {"left": "modlist-sort-button",      "up": "",  "down": "modlist-table", "right": "modlist-add-mod-button"},
         "modlist-add-mod-button":   {"left": "modlist-update-button",    "up": "",  "down": "modlist-table", "right": "modlist-back-button"},
         "modlist-back-button":      {"left": "modlist-add-mod-button",   "up": "",  "down": "modlist-table", "right": ""},
-        "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": ""}
+        "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": "modlist-filter-button"},
     }
 
     first_load = True
@@ -140,9 +136,9 @@ class ModListScreen(Screen):
                 self.filter_table()
             case 'modlist-sort-button':
                 self.open_sort_modal()
-                return
             case 'modlist-update-button': # different from action_update, opens modal for selection of update all or update modpack, if not a modpack, only confirmation for update all
-                return
+                # - implement update all mods
+                pass
             case 'modlist-add-mod-button':
                 self.action_add_mods()
             case 'modlist-back-button':
@@ -151,21 +147,10 @@ class ModListScreen(Screen):
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_mod = str(event.row_key.value)
 
+    # - implement opening mod details on select (modal with options to update, enable/disable, delete)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         # - add check if selected mod = '' (No results) and do nothing
         pass
-
-    def action_focus_move(self, direction: str):
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def action_back(self):
         self.app.pop_screen()
@@ -180,16 +165,17 @@ class ModListScreen(Screen):
         modname = mod.name if mod else 'Mod'
         self.app.push_screen(DeleteModal(title=f'Delete {modname}?'), check_delete)
     
+    # - implement enable/disable mod
     def action_enable_disable(self):
         return
     
+    # - implement update mod
     def action_update(self): # update currently selected mod
         return
     
     def action_add_mods(self):
-        # - open mod browser screen/modal, needs implementing
-        self.app.push_screen(ModBrowserModal())
-        return
+        # - implement mod browser modal
+        self.app.push_screen(ModBrowserModal(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
 
     def action_filter(self):
         self.filter_table()

@@ -1,8 +1,11 @@
 from packaging.version import Version, InvalidVersion
-from textual.events import Resize
-from textual.widgets import DataTable
+
+from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.events import Resize
+from textual.widgets import DataTable
+
 from screens.modals import FilterModal
 from helpers import CustomModal
 
@@ -53,10 +56,10 @@ class SelectorModal(CustomModal[str]):
     def on_mount(self):
         self.length = 4 + sum((col.content_width if col.width != 0 else 0) + 2 for col in self.table.columns.values())
 
-    def _on_resize(self, event: Resize):
+    @on(Resize)
+    def on_resize(self, event: Resize):
         self.table.styles.width = min(int(self.size.width * 0.8), max(self.min_width, self.length))
         self.table.styles.height = min(int(self.size.height * 0.8), len(self.table.rows) + 4)
-        return super()._on_resize(event)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_row = event.row_key.value
@@ -104,7 +107,9 @@ class SelectorModal(CustomModal[str]):
             return False
         return super().check_action(action, parameters)
 
-    def load_table(self, data: list[dict[str, str | list[str]]]):
+    @work
+    async def load_table(self, data: list[dict[str, str | list[str]]]):
+        self.table.loading = True
         for choice in data:
             row = [
                 ', '.join(cell) if isinstance(cell, list) else cell
@@ -112,10 +117,12 @@ class SelectorModal(CustomModal[str]):
             ]
             self.table.add_row(*row, key=str(choice[self.return_field]))
         if self.sort_column:
+            # - always uses version sort key if sort_column is provided, could use general purpose sort key
             def version_key(v: str):
                 try:
                     return Version(v)
                 except InvalidVersion:
-                    return v
-            self.table.sort(self.sort_column, key=lambda r: version_key(r) ,reverse=self.sort_reverse)
+                    return v.lower()
+            self.table.sort(self.sort_column, key=lambda r: version_key(r), reverse=self.sort_reverse)
+        self.table.loading = False
 

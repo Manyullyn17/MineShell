@@ -1,21 +1,20 @@
-from textual.widgets import Label, Static, Button, Link
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Container
-from helpers import CustomModal
+from textual.widgets import Label, Static, Button, Link
 
-class FolderModal(CustomModal):
+from helpers import CustomModal, FocusNavigationMixin
+
+class FolderModal(FocusNavigationMixin, CustomModal):
     CSS_PATH = 'styles/folder_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'back', show=False),
-            Binding('up', "focus_move('up')", show=False),
-            Binding('down', "focus_move('down')", show=False),
-        ]
+        ] + FocusNavigationMixin.BINDINGS
     
     navigation_map = {
-        "ftp-link": {"left":"", "up": "back",       "down": "back", "right": ""},
-        "back":     {"left":"", "up": "ftp-link",   "down": "ftp-link",     "right": ""},
+        "ftp-link": {"left":"", "up": "", "down": "back", "right": ""},
+        "back":     {"left":"", "up": "ftp-link", "down": "", "right": ""},
     }
     
     def __init__(self, instance_name: str, folder_path: str, ftp_link: str):
