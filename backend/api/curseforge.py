@@ -27,3 +27,8 @@ class CurseforgeAPI(SourceAPI):
     async def get_modlist(self, dependencies: dict) -> list[dict]:
         """Return the modlist for the given modpack version."""
         return [{}]
+
+    async def search_mods(self, query: str, limit: int=20, filters: dict | None = None) -> list[dict[str, str | list[str]]]:
+        """Search mods on Curseforge and return data for the selector modal."""
+        rows = []
+        return rows

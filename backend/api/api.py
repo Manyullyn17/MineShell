@@ -14,3 +14,6 @@ class SourceAPI(Protocol):
         """Return the modlist for the given modpack version."""
         ...
 
+    async def search_mods(self, query: str, limit: int=20, filters: dict | None = None) -> list[dict[str, str | list[str]]]:
+        """Search mods and return data for the selector modal."""
+        ...

@@ -130,6 +130,79 @@ class ModrinthAPI(SourceAPI):
             })
 
         return modlist
+    
+    # - experimental ai code
+    async def search_mods(self, query: str, limit: int=20, filters: dict | None = None) -> list[dict[str, str | list[str]]]:
+        """Search mods on Modrinth and return data for the selector modal."""
+        try:
+            async with httpx.AsyncClient() as client:
+                params = {
+                    "query": query,
+                    "facets": '[["project_type:mod"]]',
+                    "limit": limit,
+                }
+                if filters:
+                    for key, values in filters.items():
+                        if key == 'modloader':
+                            params['facets'] = f'[["project_type:mod"],["{"|".join([f"categories:{v}" for v in values])}"]]'
+                        elif key == 'mc_version':
+                            params['facets'] = f'[["project_type:mod"],["{"|".join([f"versions:{v}" for v in values])}"]]'
+                
+                resp = await client.get(
+                    f"{MODRINTH_API}/search",
+                    params=params,
+                    timeout=15.0,
+                    headers=HEADERS
+                )
+                resp.raise_for_status()
+                results = resp.json()["hits"]
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return []
+
+        # Build rows for the modal: [project_id, title, slug, downloads, client/server]
+        rows = []
+        for hit in results:
+            rows.append({
+                "name": hit["title"], # name to show
+                "author": hit["author"],
+                "downloads": f"{hit['downloads']:,}", # format downloads with commas
+                "modloader": await self.get_modloader_from_categories(hit["categories"]),
+                "categories": await self.get_only_categories_from_categories(hit["categories"]),
+                "slug": hit["slug"],
+                "description": hit["description"],
+                "project_id": hit["project_id"],
+            })
+
+        # Return data for the modal
+        return rows
+
+    # - experimental ai code
+    async def get_mod_versions(self, project_id: str, mc_version: str, modloader: str) -> list[dict]:
+        """
+        Returns a list of versions for a given Modrinth project ID.
+        Each item is [version_name, date_published].
+        Sorted newest first.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{MODRINTH_API}/project/{project_id}/version", 
+                    params={
+                        "game_versions": f'["{mc_version}"]',
+                        "loaders": f'["{modloader}"]',
+                    },
+                    headers=HEADERS, 
+                    timeout=15.0
+                )
+                resp.raise_for_status()
+                versions = resp.json()
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return []
+        # Sort newest first
+        versions.sort(key=lambda v: v["date_published"], reverse=True)
+
+        # Build simplified list
+        return versions
 
 async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
     """
@@ -157,8 +230,7 @@ async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
     server_projects = {
         proj["id"]: proj
         for proj in projects_list
-        # - maybe also "unknown"?
-        if proj.get("server_side") in ("required", "optional")
+        if proj.get("server_side") in ("required", "optional", "unknown")
     }
 
     return server_projects

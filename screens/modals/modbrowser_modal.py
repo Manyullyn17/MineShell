@@ -1,9 +1,9 @@
 from typing import cast, get_args
 
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Grid, VerticalGroup
+from textual.containers import Grid, VerticalGroup, VerticalScroll
 from textual.events import Resize
 from textual.widgets import Static, Label, Button
 
@@ -52,10 +52,12 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         self.source_api = self.sources[self.source]['api']
 
     def compose(self) -> ComposeResult:
+        # main grid
         self.grid = Grid(id='modbrowser-grid', classes='modbrowser grid')
         self.grid.border_title = 'Mod Browser'
         self.grid.border_subtitle = 'f to filter'
         with self.grid:
+            # top toolbar grid
             with Grid(id='modbrowser-top-grid', classes='modbrowser grid top'):
                 yield Static('Search:', classes='modbrowser text')
                 self.input = SmartInput(placeholder='Search Mods...', id='modbrowser-search', classes='modbrowser input shrink')
@@ -72,12 +74,14 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                 self.mcversion_select = CustomSelect([('...', '...')], allow_blank=False, disabled=True, id='modbrowser-mcversion-select', classes='modbrowser select shrink')
                 yield self.mcversion_select
 
+            # mod list
             self.list_group = VerticalGroup(classes='modbrowser group')
             self.list_group.border_title = 'Mods List'
             with self.list_group:
                 self.mod_table = CustomTable(zebra_stripes=True, cursor_type='row', id='modbrowser-table', classes='modbrowser table')
                 yield self.mod_table
 
+            # mod details grid
             self.detail_grid = Grid(classes='modbrowser group detail')
             self.detail_grid.border_title = 'Details'
             with self.detail_grid:
@@ -86,8 +90,12 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                 yield self.selected_mod
 
                 yield Static('Version:', classes='modbrowser text')
-                self.version_select = CustomSelect([('Select a Mod', 'Select a Mod')], allow_blank=False, id='modbrowser-version-select', classes='modbrowser select')
+                self.version_select = CustomSelect([('Select a Mod', 'Select a Mod')], allow_blank=False, id='modbrowser-version-select', classes='modbrowser select shrink')
                 yield self.version_select
+
+                yield Static('Description:', id='modbrowser-description-label', classes='modbrowser text')
+                self.description = Static('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.', id='modbrowser-description', classes='modbrowser text description', expand=True)
+                yield VerticalScroll(self.description, id='modbrowser-description-scroll', classes='modbrowser description-scroll')
 
                 yield Static('Dependencies:', classes='modbrowser text wide')
                 self.dependencies_grid = Grid(id='modbrowser-dependencies-grid', classes='modbrowser grid dependencies')
@@ -103,8 +111,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         self.modloader_select.value = self.modloader
         self.dependencies_grid.mount(Static('Select a Mod to see Dependencies', classes='modbrowser text wide'))
         self.mod_table.add_columns('Name', 'Author', 'Downloads', 'Loaders')
-        await self.load_mods()
-        # - ui still hangs while loading versions
+        self.search_mods()
         self.run_worker(self.load_mc_versions(), thread=True)
 
     async def load_mc_versions(self):
@@ -113,22 +120,24 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         if version_ids:
             self.call_later(self.mcversion_select.set_options, version_ids)
             if self.mc_version in dict(version_ids):
-                self.mcversion_select.value = self.mc_version
+                self.call_later(self.mcversion_select.set_value, self.mc_version)
+                # self.mcversion_select.value = self.mc_version
         self.mcversion_select.disabled = False
 
     @on(Resize)
     def on_resize(self, event: Resize):
         self.grid.styles.height = max(20, self.size.height * 0.9)
         self.grid.styles.width = max(81, self.size.width * 0.8)
+        # self.description.styles.max_height = f'{self.size.height * 0.35}'
+        self.query_one('#modbrowser-description-scroll').styles.max_height = f'{self.size.height * 0.15}'
+
         # - add dynamic button size to other buttons, screens and modals?
         if self.size.height * 0.9 < 25:
-            # self.install_button.compact = True
             for widget in self.query('.shrink'):
                 if isinstance(widget, (Button, SmartInput, CustomSelect)):
                     widget.compact = True
             self.query_one('#modbrowser-top-grid').styles.grid_rows = '1 1'
         else:
-            # self.install_button.compact = False
             for widget in self.query('.shrink'):
                 if isinstance(widget, (Button, SmartInput, CustomSelect)):
                     widget.compact = False
@@ -167,28 +176,59 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             notify = self.sources[self.source]['notify']
             if notify:
                 self.notify(notify, severity='information', timeout=5)
-            # - reload mods list
+            self.search_mods()
 
     @on(CustomSelect.Changed, '#modbrowser-modloader-select')
     def on_modloader_select_changed(self, event: CustomSelect.Changed) -> None:
         if event.value != self.modloader:
             self.modloader = cast(ModloaderType, str(event.value).lower())
-            # - reload mods list
+            self.search_mods()
 
     @on(CustomSelect.Changed, '#modbrowser-mcversion-select')
     def on_mcversion_select_changed(self, event: CustomSelect.Changed) -> None:
-        if event.value != self.mc_version:
+        if event.value != self.mc_version and event.value != '...':
             self.mc_version = str(event.value)
-            # - reload mods list
+            self.search_mods()
 
     @on(CustomSelect.Changed, '#modbrowser-version-select')
     def on_version_select_changed(self, event: CustomSelect.Changed) -> None:
         pass
 
-    async def load_mods(self):
+    def on_input_submitted(self, event: SmartInput.Submitted) -> None:
+        match event.input.id:
+            case 'modbrowser-search':
+                self.search_mods()
+            case default:
+                return
+
+    @work(thread=True)
+    async def search_mods(self):
+        query = self.input.value
+        filters = {
+            'modloader': [self.modloader],
+            'mc_version': [self.mc_version]
+        }
+        data = await self.source_api.search_mods(query, filters=filters)
+        self.mod_table.clear()
+        if data:
+            self.call_later(self.load_mods, data)
+        else:
+            self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
+
+    async def load_mods(self, data: list[dict] | None = None):
         self.mod_table.loading = True
         self.mod_table.clear()
-        # - get mods and display them in the datatable
+        if data:
+            for mod in data:
+                self.mod_table.add_row(
+                    mod.get('name', ''),
+                    mod.get('author', ''),
+                    mod.get('downloads', ''),
+                    ', '.join(mod.get('modloader', [])),
+                    key=mod.get('slug')
+                )
+        else:
+            self.mod_table.add_row("No results found", key="")
         self.mod_table.loading = False
 
     async def load_dependencies(self):

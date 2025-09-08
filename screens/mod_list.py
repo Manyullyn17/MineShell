@@ -150,6 +150,9 @@ class ModListScreen(FocusNavigationMixin, Screen):
     # - implement opening mod details on select (modal with options to update, enable/disable, delete)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         # - add check if selected mod = '' (No results) and do nothing
+        if str(event.row_key.value) == '':
+            return
+        
         pass
 
     def action_back(self):
@@ -174,7 +177,6 @@ class ModListScreen(FocusNavigationMixin, Screen):
         return
     
     def action_add_mods(self):
-        # - implement mod browser modal
         self.app.push_screen(ModBrowserModal(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
 
     def action_filter(self):

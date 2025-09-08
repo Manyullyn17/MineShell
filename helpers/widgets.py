@@ -19,6 +19,9 @@ class CustomSelect(Select):
             return
         # Fallback to normal Select behavior
         return super()._on_key(event)
+    
+    def set_value(self, value):
+        self.value = value
 
 class SmartInput(Input):
     def on_key(self, event):
