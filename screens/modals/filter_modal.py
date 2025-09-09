@@ -32,20 +32,14 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
 
     def compose(self) -> ComposeResult:
         self.grid = Grid(id='filter-grid')
+        yield self.grid
 
-        rows = len(self.filter_columns) + 2
-        self.grid.styles.grid_size_rows = rows
-        self.grid.styles.grid_size_columns = 2
-        longest = max(len(max(self.filter_columns, key=len)), 7)
-        self.grid.styles.grid_columns = f'{longest + 2} 1fr' # +2 for padding
-        row_size = ['auto'] * len(self.filter_columns) + ['1fr', '4']
+    def on_mount(self):
+        row_size = ['auto'] * len(self.filter_columns) + ['1fr', '3']
         self.grid.styles.grid_rows = ' '.join(row_size)
-
         self.grid.border_title = 'Filter Table'
         self.grid.border_subtitle = 'r to reset'
-        yield self.grid
-        
-    def on_mount(self):
+
         unique_values = {
             key: list({
                 elem

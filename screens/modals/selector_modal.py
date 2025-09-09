@@ -53,14 +53,6 @@ class SelectorModal(CustomModal[str]):
         self.table.border_subtitle = self.subtitle_txt
         yield self.table
 
-    def on_mount(self):
-        self.length = 4 + sum((col.content_width if col.width != 0 else 0) + 2 for col in self.table.columns.values())
-
-    @on(Resize)
-    def on_resize(self, event: Resize):
-        self.table.styles.width = min(int(self.size.width * 0.8), max(self.min_width, self.length))
-        self.table.styles.height = min(int(self.size.height * 0.8), len(self.table.rows) + 4)
-
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_row = event.row_key.value
         self.dismiss(str(selected_row))

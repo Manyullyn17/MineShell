@@ -1,12 +1,11 @@
-from textual import on
-from textual.events import MouseDown
 from textual.app import ComposeResult
-from textual.widgets import Button
-from textual.screen import ModalScreen
-from textual.containers import VerticalGroup
 from textual.binding import Binding
+from textual.containers import VerticalGroup
+from textual.widgets import Button
 
-class ContextMenu(ModalScreen[str]):
+from helpers import CustomModal
+
+class ContextMenu(CustomModal[str]):
     CSS_PATH = 'styles/context_menu.tcss'
 
     BINDINGS = [
@@ -46,12 +45,3 @@ class ContextMenu(ModalScreen[str]):
 
     def action_back(self):
         self.dismiss()
-
-    @on(MouseDown)
-    def on_mouse_down(self, event: MouseDown):
-        pos_x = self.pos[0]
-        pos_y = self.pos[1] + self.pos_offset
-        menu = self.menu
-        if (event.screen_x < pos_x or event.screen_x > pos_x + menu.size.width+1 # +1 for border
-            or event.screen_y < pos_y or event.screen_y > pos_y + menu.size.height+1): # +1 for border
-            self.dismiss()

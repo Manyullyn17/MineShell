@@ -94,14 +94,14 @@ class CustomModal(ModalScreen[ScreenResultType]):
         if w == 0 or h == 0:
             return
 
-        screen_w, screen_h = self.size
-        left = (screen_w - w) // 2
-        right = (screen_w + w) // 2 - 1
-        top = (screen_h - h) // 2
-        bottom = (screen_h + h) // 2 - 1
+        x, y, width, height = self.find_widget(widget).region
+        left = x
+        right = x + width - 1
+        top = y
+        bottom = y + height - 1
 
         mx, my = event.screen_x, event.screen_y
-        if mx < left or mx > right or my < top or my > bottom:
+        if not (left <= mx <= right and top <= my <= bottom):
             self.dismiss()
 
     def get_main_widget(self) -> Widget | None:

@@ -5,7 +5,7 @@ from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.events import MouseDown, ScreenResume
+from textual.events import MouseDown, ScreenResume, Key
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Footer, Header
 
@@ -119,6 +119,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
+        # - sometimes doesn't open when right clicking on the same spot after closing? (only with same row)
         if self.mouse_button == 3: # right click
             def context_handler(result: str | None) -> None:
                 if not result:
@@ -132,16 +133,21 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
             self.app.push_screen(ContextMenu((self.mouse_x, self.mouse_y), ['set-default', 'edit', 'delete']), context_handler)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        # - this blocks enter key from working
         if self.mouse_button == 1: # left click
             selected_instance = str(event.row_key.value)
             self.open_instance(selected_instance)
+            self.mouse_button = 0 # reset mouse_button
 
     @on(MouseDown)
     def on_mouse_down(self, event: MouseDown):
         self.mouse_button = event.button
         self.mouse_x = event.x
         self.mouse_y = event.y
+
+    @on(Key)
+    def on_key(self, event: Key):
+        if event.key == 'enter' and self.focused and self.focused.id == 'instances_list':
+            self.mouse_button = 1 # pretend left click happened, otherwise enter doesn't work
 
     def action_back(self):
         self.app.pop_screen()

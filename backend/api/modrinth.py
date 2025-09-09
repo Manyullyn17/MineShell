@@ -100,7 +100,7 @@ class ModrinthAPI(SourceAPI):
         project_ids = [dep["project_id"] for dep in dependencies if dep["project_id"]]
 
         # Fetch project info for these IDs
-        projects = await fetch_projects(project_ids)
+        projects = await self.fetch_projects(project_ids)
         if not projects:
             return []
 
@@ -108,7 +108,7 @@ class ModrinthAPI(SourceAPI):
         version_ids = [dep["version_id"] for dep in dependencies if dep["version_id"]]
 
         # Fetch specific versions by ID
-        versions = await fetch_versions(version_ids)
+        versions = await self.fetch_versions(version_ids)
 
         modlist = []
         for version in versions:
@@ -131,23 +131,30 @@ class ModrinthAPI(SourceAPI):
 
         return modlist
     
-    # - experimental ai code
     async def search_mods(self, query: str, limit: int=20, filters: dict | None = None) -> list[dict[str, str | list[str]]]:
         """Search mods on Modrinth and return data for the selector modal."""
         try:
             async with httpx.AsyncClient() as client:
+                facets = [
+                    ["server_side:required", "server_side:optional", "server_side:unknown"]
+                ]
+
+                if filters:
+                    if 'modloader' in filters:
+                        facets.append([f"categories:{v}" for v in filters['modloader']])
+                    if 'mc_version' in filters:
+                        facets.append([f"versions:{v}" for v in filters['mc_version']])
+                    if 'type' in filters:
+                        facets.append([f"project_type:{v}" for v in filters['type']])
+                    else:
+                        facets.append(["project_type:mod", "project_type:datapack"])
+                
                 params = {
                     "query": query,
-                    "facets": '[["project_type:mod"]]',
+                    "facets": json.dumps(facets),
                     "limit": limit,
                 }
-                if filters:
-                    for key, values in filters.items():
-                        if key == 'modloader':
-                            params['facets'] = f'[["project_type:mod"],["{"|".join([f"categories:{v}" for v in values])}"]]'
-                        elif key == 'mc_version':
-                            params['facets'] = f'[["project_type:mod"],["{"|".join([f"versions:{v}" for v in values])}"]]'
-                
+
                 resp = await client.get(
                     f"{MODRINTH_API}/search",
                     params=params,
@@ -170,13 +177,15 @@ class ModrinthAPI(SourceAPI):
                 "categories": await self.get_only_categories_from_categories(hit["categories"]),
                 "slug": hit["slug"],
                 "description": hit["description"],
+                "type": hit["project_type"] if 'datapack' not in hit["categories"] else 'datapack',
+                "server_side": hit["server_side"],
+                "versions": hit["versions"],
                 "project_id": hit["project_id"],
             })
 
         # Return data for the modal
         return rows
 
-    # - experimental ai code
     async def get_mod_versions(self, project_id: str, mc_version: str, modloader: str) -> list[dict]:
         """
         Returns a list of versions for a given Modrinth project ID.
@@ -204,57 +213,62 @@ class ModrinthAPI(SourceAPI):
         # Build simplified list
         return versions
 
-async def fetch_projects(project_ids: list[str]) -> dict[str, dict]:
-    """
-    Fetch project info for a list of project IDs from Modrinth.
+    async def fetch_projects(self, project_ids: list[str], filter_server_side: bool = True) -> dict[str, dict]:
+        """
+        Fetch project info for a list of project IDs from Modrinth.
 
-    Args:
-        project_ids: List of project_id strings
+        Args:
+            project_ids: List of project_id strings
+            filter_server_side: If True, only return server-side compatible projects.
+ 
+        Returns:
+            Dictionary mapping project_id -> project JSON object
+        """
+        if not project_ids:
+            return {}
 
-    Returns:
-        Dictionary mapping project_id -> project JSON object
-    """
-    if not project_ids:
-        return {}
+        url = f"{MODRINTH_API}/projects?ids={json.dumps(project_ids)}"
 
-    url = f"{MODRINTH_API}/projects?ids={json.dumps(project_ids)}"
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(url, headers=HEADERS)
+                resp.raise_for_status()
+                projects_list = resp.json()
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return {}
+        
+        projects_dict = {proj["id"]: proj for proj in projects_list}
 
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(url, headers=HEADERS)
-            resp.raise_for_status()
-            projects_list = resp.json()
-    except (httpx.ReadTimeout, httpx.TimeoutException):
-        return {}
-    # Filter server-side mods
-    server_projects = {
-        proj["id"]: proj
-        for proj in projects_list
-        if proj.get("server_side") in ("required", "optional", "unknown")
-    }
+        if filter_server_side:
+            # Filter server-side mods
+            server_projects = {
+                proj_id: proj for proj_id, proj in projects_dict.items()
+                if proj.get("server_side") in ("required", "optional", "unknown")
+            }
+            return server_projects
 
-    return server_projects
-    
-async def fetch_versions(version_ids: list[str]) -> list[dict]:
-    """
-    Fetch version info for a list of version IDs from Modrinth.
+        return projects_dict
+        
+    async def fetch_versions(self, version_ids: list[str]) -> list[dict]:
+        """
+        Fetch version info for a list of version IDs from Modrinth.
 
-    Args:
-        version_ids: List of version_id strings
+        Args:
+            version_ids: List of version_id strings
 
-    Returns:
-        Dictionary mapping version_id -> version JSON object
-    """
-    if not version_ids:
-        return []
+        Returns:
+            Dictionary mapping version_id -> version JSON object
+        """
+        if not version_ids:
+            return []
 
-    url = f"{MODRINTH_API}/versions?ids={json.dumps(version_ids)}"
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(url, headers=HEADERS)
-            resp.raise_for_status()
-            versions_list = resp.json()
-    except (httpx.ReadTimeout, httpx.TimeoutException):
-        return []
+        url = f"{MODRINTH_API}/versions?ids={json.dumps(version_ids)}"
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.get(url, headers=HEADERS)
+                resp.raise_for_status()
+                versions_list = resp.json()
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return []
 
-    return versions_list
+        return versions_list
