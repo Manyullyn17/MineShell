@@ -61,6 +61,10 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
 
     selected_dependencies: dict[str, bool] = {}
 
+    filters: dict = {}
+
+    COLUMNS = ['Name', 'Author', 'Downloads', 'Type', 'Loaders']
+
     def __init__(self, modloader: ModloaderType, mc_version: str, source: str = 'modrinth') -> None:
         super().__init__()
         self.modloader = modloader
@@ -123,22 +127,23 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                 yield self.install_button
 
             self.filter_label = Label(id='modbrowser-filter-label', classes='modbrowser text label hidden')
+            yield self.filter_label
 
     async def on_mount(self):
         self.source_select.value = self.source
         self.modloader_select.value = self.modloader
-        self.mod_table.add_columns('Name', 'Author', 'Downloads', 'Type', 'Loaders')
+        self.mod_table.add_columns(*self.COLUMNS)
         self.search_mods()
         self.run_worker(self.load_mc_versions(), thread=True)
 
     async def load_mc_versions(self):
+        """Get Minecraft versions and load into mcversion_select."""
         mc_versions = await get_minecraft_versions()
         version_ids: list[tuple[str, str]] = [(v['id'], v['id']) for v in mc_versions]
         if version_ids:
             self.call_later(self.mcversion_select.set_options, version_ids)
             if self.mc_version in dict(version_ids):
                 self.call_later(self.mcversion_select.set_value, self.mc_version)
-                # self.mcversion_select.value = self.mc_version
         self.mcversion_select.disabled = False
 
     @on(Resize)
@@ -162,7 +167,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             case 'modbrowser-install-button':
                 pass
             case 'modbrowser-filter-button':
-                pass
+                self.action_filter()
 
     @on(Checkbox.Changed)
     def on_dependency_checkbox_changed(self, event: Checkbox.Changed) -> None:
@@ -174,17 +179,17 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
     def action_back(self):
         self.dismiss()
 
-    def action_focus_move(self, direction: str):
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
+    # def action_focus_move(self, direction: str):
+    #     focused = self.focused
+    #     if not focused or not focused.id:
+    #         return
+    #     try:
+    #         next_id = self.navigation_map.get(focused.id, {}).get(direction)
+    #         if next_id:
+    #             next_widget = self.query_one(f'#{next_id}')
+    #             next_widget.focus()
+    #     except Exception as e:
+    #         self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     @on(CustomSelect.Changed, '#modbrowser-source-select')
     def on_source_select_changed(self, event: CustomSelect.Changed) -> None:
@@ -217,6 +222,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             self.dependencies = self.selected_mod_version.get('dependencies', [])
             self.run_worker(self.load_dependencies())
 
+    @on(CustomTable.RowSelected)
     async def on_data_table_row_selected(self, event: CustomTable.RowSelected) -> None:
         new_row = event.row_key.value
         if new_row == self.selected_mod.get('slug'):
@@ -228,6 +234,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         self.dependencies_grid.mount(Static('Loading Dependencies...', classes='modbrowser text wide'))
         await self.load_versions(selected_row)
 
+    @on(SmartInput.Submitted)
     def on_input_submitted(self, event: SmartInput.Submitted) -> None:
         match event.input.id:
             case 'modbrowser-search':
@@ -237,12 +244,14 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
 
     @work(thread=True)
     async def search_mods(self):
+        """Search mods on the selected source."""
         query = self.input.value
         filters = {
             'modloader': [self.modloader],
             'mc_version': [self.mc_version],
         }
-        # - add support for datapacks
+        filters.update(self.filters)
+
         data = await self.source_api.search_mods(query, filters=filters)
         self.mod_table.clear()
         if data:
@@ -252,6 +261,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
 
     @work(thread=True)
     async def get_mod_versions(self, project_id: str):
+        """Get versions for selected mod."""
         self.mod_versions = await self.source_api.get_mod_versions(project_id, self.mc_version, self.modloader)
         if not self.mod_versions:
             self.call_later(self.version_select.set_options, [('No versions found', '')])
@@ -267,8 +277,10 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         self.run_worker(self.load_dependencies())
 
     async def load_mods(self, data: list[dict] | None = None):
+        """Load mods into the table."""
         self.mod_table.loading = True
-        self.mod_table.clear()
+        self.mod_table.clear(columns=True)
+        self.mod_table.add_columns(*self.COLUMNS)
         if data:
             self.mods = data
             for mod in data:
@@ -276,9 +288,9 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                     mod.get('name', ''),
                     mod.get('author', ''),
                     mod.get('downloads', ''),
-                    mod.get('type', '').capitalize(),
+                    ', '.join(mod.get('type', '')).title(),
                     ', '.join(mod.get('modloader', [])),
-                    # - curseforge support? duplicate project id in poject_id and slug?
+                    # - curseforge support? duplicate project id in poject_id and slug for curseforge?
                     key=mod.get('slug')
                 )
         else:
@@ -289,6 +301,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         await self.load_versions(selected_row)
 
     async def load_versions(self, mod_id: str | None):
+        """Load versions for selected mod."""
         if not mod_id:
             return
         identifier = self.sources[self.source]['mod_identifier']
@@ -298,6 +311,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
         self.get_mod_versions(self.selected_mod.get(identifier))
 
     async def load_dependencies(self):
+        """"Load dependencies for selected version."""
         self.dependencies_grid.remove_children()
         self.dependencies_grid.mount(Static('Loading Dependencies...', classes='modbrowser text wide'))
 
@@ -376,3 +390,27 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             label = Label(f"{dep_name} {dep_type_styled}")
 
             self.dependencies_grid.mount(checkbox, label)
+
+    def action_filter(self):
+        """Open the filter modal."""
+        def filter_chosen(filter: dict | None) -> None:
+            if filter:
+                formatted_filters = ' | '.join(
+                    f"{col.title()}: {', '.join(val) if isinstance(val, list) else val.strip('[]').replace('\'','')}" 
+                    for col, val in filter.items()
+                )
+                self.filter_label.update(f'Filter: {formatted_filters}')
+                self.filter_label.remove_class('hidden')
+                self.filters = filter
+            else:
+                self.filter_label.update('')
+                self.filter_label.add_class('hidden')
+                self.filters = {}
+            self.search_mods()
+        
+        self.app.push_screen(FilterModal([{'type': 'Mod'}, {'type': 'Datapack'}], ['type']), filter_chosen)
+
+# - imma be honest, i need way better selection and filtering logic, this ain't working
+# - some mods support multiple loaders, by default it should be for the instance modloader
+# - but especially with datapacks you need the ability to select if you want the datapack version or mod version of it
+# - (often available as datapack, forge-, fabric-, neoforge- and quilt-mod)

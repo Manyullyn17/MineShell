@@ -139,16 +139,24 @@ class ModrinthAPI(SourceAPI):
                     ["server_side:required", "server_side:optional", "server_side:unknown"]
                 ]
 
+                # [["project_type:mod", "project_type:datapack"],["categories:fabric", "categories:datapack"],["server_side:required","server_side:optional","server_side:unknown"]]
+                # - if project_type:datapack -> modloader needs to be empty, for mod and datapack it needs to be "mcversion and((mod and modloader) or datapack)"
                 if filters:
-                    if 'modloader' in filters:
-                        facets.append([f"categories:{v}" for v in filters['modloader']])
+                    project_types = [pt.lower() for pt in filters.get('type', ['mod', 'datapack'])]
+                    facets.append([f"project_type:{pt}" for pt in project_types])
+
                     if 'mc_version' in filters:
                         facets.append([f"versions:{v}" for v in filters['mc_version']])
-                    if 'type' in filters:
-                        facets.append([f"project_type:{v}" for v in filters['type']])
-                    else:
-                        facets.append(["project_type:mod", "project_type:datapack"])
-                
+
+                    # This handles the logic for "(mod AND modloader) OR datapack".
+                    # By adding 'categories:datapack' to the modloader filter group, we ensure that
+                    # projects can match if they are either a mod with the correct modloader OR a datapack.
+                    if 'modloader' in filters:
+                        modloader_facets = [f"categories:{v}" for v in filters['modloader']] if project_types != ['datapack'] else []
+                        if 'datapack' in project_types:
+                            modloader_facets.append("categories:datapack")
+                        facets.append(modloader_facets)
+
                 params = {
                     "query": query,
                     "facets": json.dumps(facets),
@@ -161,6 +169,7 @@ class ModrinthAPI(SourceAPI):
                     timeout=15.0,
                     headers=HEADERS
                 )
+                # - should probably add handling for that, probably just crashes as it is now
                 resp.raise_for_status()
                 results = resp.json()["hits"]
         except (httpx.ReadTimeout, httpx.TimeoutException):
@@ -169,6 +178,15 @@ class ModrinthAPI(SourceAPI):
         # Build rows for the modal: [project_id, title, slug, downloads, client/server]
         rows = []
         for hit in results:
+            type = set()
+            for cat in hit["categories"]:
+                if cat in MODLOADERS:
+                    type.add('mod')
+                elif cat == 'datapack':
+                    type.add('datapack')
+            if not type:
+                type.add(hit["project_type"] or "mod")
+            
             rows.append({
                 "name": hit["title"], # name to show
                 "author": hit["author"],
@@ -177,7 +195,10 @@ class ModrinthAPI(SourceAPI):
                 "categories": await self.get_only_categories_from_categories(hit["categories"]),
                 "slug": hit["slug"],
                 "description": hit["description"],
-                "type": hit["project_type"] if 'datapack' not in hit["categories"] else 'datapack',
+                # - change so it displays Mod and Datapack if both
+                # "type": hit["project_type"] if 'datapack' not in hit["categories"] else 'datapack',
+                # "type": [cat for cat in hit["categories"] if cat in MODLOADERS or cat == 'datapack'],
+                "type": sorted(type),
                 "server_side": hit["server_side"],
                 "versions": hit["versions"],
                 "project_id": hit["project_id"],
