@@ -119,24 +119,24 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
-        # - sometimes doesn't open when right clicking on the same spot after closing? (only with same row)
-        if self.mouse_button == 3: # right click
-            def context_handler(result: str | None) -> None:
-                if not result:
-                    return
-                if result == 'delete':
-                    self.action_delete()
-                    return
-                # - add more buttons
-                return
-            self.mouse_button = 0 # reset mouse_button to prevent loops
-            self.app.push_screen(ContextMenu((self.mouse_x, self.mouse_y), ['set-default', 'edit', 'delete']), context_handler)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        if self.mouse_button == 1: # left click
-            selected_instance = str(event.row_key.value)
-            self.open_instance(selected_instance)
-            self.mouse_button = 0 # reset mouse_button
+        match self.mouse_button:
+            case 1: # left click
+                selected_instance = str(event.row_key.value)
+                self.open_instance(selected_instance)
+                self.mouse_button = 0 # reset mouse_button
+            case 3: # right click
+                def context_handler(result: str | None) -> None:
+                    if not result:
+                        return
+                    if result == 'delete':
+                        self.action_delete()
+                        return
+                    # - add more buttons
+                    return
+                self.mouse_button = 0 # reset mouse_button to prevent loops
+                self.app.push_screen(ContextMenu((self.mouse_x, self.mouse_y), ['set-default', 'edit', 'delete']), context_handler)
 
     @on(MouseDown)
     def on_mouse_down(self, event: MouseDown):

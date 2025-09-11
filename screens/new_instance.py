@@ -209,16 +209,16 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
 
     async def open_modpack_selector(self, query: str):
         # - get limit from settings, add way to load more
-        # - somehow open modal before loading so it doesn't feel frozen?
-        title, data = await self.source_api.search_modpacks(query, limit=20)
+        # title, data = await self.source_api.search_modpacks(query, limit=20)
 
-        if not title or not data:
-            self.notify(f"Couldn't load Modpacks. Query: '{query}'", severity='error', timeout=5)
-            return
+        # if not title or not data:
+        #     self.notify(f"Couldn't load Modpacks. Query: '{query}'", severity='error', timeout=5)
+        #     return
 
-        async def modpack_selected(result: str | None) -> None:
-            if result:
-                selected_pack = next((r for r in data if r["slug"] == result), None)
+        async def modpack_selected(result: str | tuple[str, list[dict[str, str | list[str]]]] | None) -> None:
+            if result and isinstance(result, tuple):
+                selected, data = result
+                selected_pack = next((r for r in data if r["slug"] == selected), None)
                 if selected_pack: # ["Name", "Author", "Downloads", "Modloader", "Categories", "Slug", "Description"]
                     self.modlist = [] # clear modlist when changing modpack
                     self.modpack_name = str(selected_pack["name"])
@@ -234,17 +234,28 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
                         self.selected_modpack_version = self.versions[0]
             self.query_one('#search_button').loading = False
 
-
         await self.app.push_screen(
             SelectorModal(
-                title=title,
-                choices=data,
+                title=f'Select Modpack (Search: {query})',
+                choices_fn=self.source_api.search_modpacks,
+                choices_fn_args=(query, 20),
                 return_field='slug',
                 hide_return_field=True,
                 filter_columns=["author", "modloader", "categories"]
             ),
             modpack_selected
         )
+
+        # await self.app.push_screen(
+        #     SelectorModal(
+        #         title=title,
+        #         choices=data,
+        #         return_field='slug',
+        #         hide_return_field=True,
+        #         filter_columns=["author", "modloader", "categories"]
+        #     ),
+        #     modpack_selected
+        # )
 
     def action_back(self):
         self.app.pop_screen()
@@ -384,8 +395,8 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
 
         self.version_selector.loading = True
         
-        def version_chosen(result: str | None) -> None:
-            if result:
+        def version_chosen(result: str | tuple | None) -> None:
+            if result and isinstance(result, str):
                 version = next((v for v in self.versions if v["id"] == result), None)
                 if version:
                     self.version_selector.label = version["version_number"]
@@ -409,7 +420,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.app.push_screen(
                 SelectorModal(
                     "Choose Modpack Version",
-                    choices,
+                    choices=choices,
                     return_field='id',
                     hide_return_field=True,
                     filter_columns=['game_version', 'modloader', 'version_type']
@@ -432,8 +443,8 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
     async def select_mc_version(self):
         self.mc_version_selector.loading = True
         
-        def mc_version_chosen(result: str | None) -> None:
-            if result:
+        def mc_version_chosen(result: str | tuple | None) -> None:
+            if result and isinstance(result, str):
                 self.mc_version_selector.label = result
                 self.selected_minecraft_version = next((version for version in mc_versions if version["id"] == result), {})
             self.mc_version_selector.loading = False
@@ -446,7 +457,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.app.push_screen(
                 SelectorModal(
                     "Choose Minecraft Version",
-                    version_ids,
+                    choices=version_ids,
                     show_filter=False
                 ),
                 mc_version_chosen
@@ -461,8 +472,8 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             return
         self.modloader_version_selector.loading = True
         
-        def modloader_version_chosen(result: str | None) -> None:
-            if result:
+        def modloader_version_chosen(result: str | tuple | None) -> None:
+            if result and isinstance(result, str):
                 self.modloader_version_selector.label = result
                 self.selected_modloader_version = result
             self.modloader_version_selector.loading = False
@@ -477,7 +488,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.app.push_screen(
                 SelectorModal(
                     "Choose Modloader Version",
-                    versions_list,
+                    choices=versions_list,
                     filter_columns=filter_columns[self.selected_modloader],
                     show_filter=filter_columns[self.selected_modloader],
                     sort_column='version',

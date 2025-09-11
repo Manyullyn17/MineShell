@@ -51,18 +51,10 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
         }
 
         def sort_key(v: str):
-            if v.replace(".", "").isdigit():  # crude check for version numbers
-                # Split by dots and convert to ints for proper version comparison
-                return (0, tuple(map(int, v.split("."))))
-            else:
-                return (1, v.lower())  # alphabetical for text
-        
-        # - might be better?
-        def version_key(v: str):
-                try:
-                    return Version(v)
-                except InvalidVersion:
-                    return (1, v.lower())
+            try: # try sorting by version
+                return Version(v)
+            except InvalidVersion:
+                return (1, v.lower())  # if not, use alphabetical for text
 
         self.collapsible_ids = []
         for column in self.filter_columns:

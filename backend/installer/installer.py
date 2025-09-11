@@ -140,7 +140,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         await smooth_step_callback('Getting Project Ids')
         project_ids = [dep["project_id"] for dep in dependencies if dep["project_id"]]
         # - make source agnostic
-        projects = await modrinth.fetch_projects(project_ids)
+        projects = await modrinth.ModrinthAPI().fetch_projects(project_ids)
         if not projects:
             return 5, 'Could not get Projects'
         progress_bar_callback(total=100, progress=33, step=5)
@@ -151,7 +151,7 @@ async def install_modpack(instance: InstanceConfig, steps: list[str], dependenci
         await smooth_step_callback('Getting Version Ids')
         version_ids = [dep["version_id"] for dep in dependencies if dep["project_id"] in projects]
         # - make source agnostic
-        versions = await modrinth.fetch_versions(version_ids)
+        versions = await modrinth.ModrinthAPI().fetch_versions(version_ids)
         if not versions:
             return 5, 'Could not get Versions'
         progress_bar_callback(total=100, progress=66, step=5)

@@ -179,18 +179,6 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
     def action_back(self):
         self.dismiss()
 
-    # def action_focus_move(self, direction: str):
-    #     focused = self.focused
-    #     if not focused or not focused.id:
-    #         return
-    #     try:
-    #         next_id = self.navigation_map.get(focused.id, {}).get(direction)
-    #         if next_id:
-    #             next_widget = self.query_one(f'#{next_id}')
-    #             next_widget.focus()
-    #     except Exception as e:
-    #         self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
-
     @on(CustomSelect.Changed, '#modbrowser-source-select')
     def on_source_select_changed(self, event: CustomSelect.Changed) -> None:
         if event.value != self.source:
