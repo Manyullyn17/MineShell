@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, Field
 from typing import List, Optional, Literal, ClassVar
 
 from helpers import format_date, ModloaderType
@@ -26,8 +26,6 @@ class ModEntry(BaseModel):
     is_override: bool = False
 
     def formatted_date(self, format=DATE_FORMAT) -> str:
-            if not self.install_date:
-                return ''
             return format_date(self.install_date.isoformat(), format)
     
     def formatted_release_date(self, format=DATE_FORMAT) -> str:
@@ -36,6 +34,7 @@ class ModEntry(BaseModel):
             return format_date(self.release_date.isoformat(), format)
 
 class ModList(BaseModel):
+    # - use Field(default_factory=list)?
     mods: List[ModEntry] = []
 
     @classmethod
@@ -66,9 +65,8 @@ class ModList(BaseModel):
         # - change to use datapacks path
         del_path = instance_path / (Path("mods") if mod.type == 'mod' else Path("world")) / "datapacks" / mod.filename
         try:
-            if del_path.exists():
-                os.remove(del_path) # delete mod file
-        except:
+            del_path.unlink(missing_ok=True) # delete mod file, if missing -> still runs code to delete from modlist
+        except OSError:
             return False
         self.mods = [m for m in self.mods if m.mod_id != mod_id] # delete mod from modlist
         return len(self.mods) < before
@@ -134,7 +132,8 @@ class InstanceConfig(BaseModel):
     memory_max: Optional[int] = None
     # - change so it's per setting
     overwrite_global_settings: bool = False
-    mods: ModList = ModList()
+    # mods: ModList = ModList()
+    mods: ModList = Field(default_factory=ModList)
     # Optional per-instance settings overriding global config
     update_disabled_mods: Literal["update_keep_disabled", "skip_update", "update_enable"] = "update_keep_disabled"
     downgrade_behavior: Literal["ask", "keep", "downgrade"] = "ask"
@@ -150,8 +149,6 @@ class InstanceConfig(BaseModel):
     }
 
     def formatted_modloader(self) -> str:
-        if not self.modloader:
-            return ''
         return self.MODLOADER_DISPLAY.get(self.modloader, self.modloader.capitalize())
 
     # ----------------------------
@@ -202,12 +199,12 @@ class InstanceSummary(BaseModel):
     instance_id: str
     name: str
     status: Literal["stopped", "running", "starting"] = "stopped"
-    created: datetime | None = None
-    pack_version: str | None = None
-    modloader: ModloaderType | None = None
-    minecraft_version: str | None = None
+    created: Optional[datetime] = None
+    pack_version: Optional[str] = None
+    modloader: Optional[ModloaderType] = None
+    minecraft_version: Optional[str] = None
     datapacks_folder: Path = Path("world") / "datapacks"
-    path: Path | None = None  # path to instance folder
+    path: Optional[Path] = None  # path to instance folder
 
     MODLOADER_DISPLAY: ClassVar = {
         "fabric": "Fabric",
@@ -228,7 +225,8 @@ class InstanceSummary(BaseModel):
 
 class InstanceRegistry(BaseModel):
     instances: List[InstanceSummary] = []
-    last_updated: datetime | None = None
+    last_updated: Optional[datetime] = None
+    # - add default instance
 
     @classmethod
     def load(cls, folder: Path=Path('instances')) -> "InstanceRegistry":
@@ -248,11 +246,11 @@ class InstanceRegistry(BaseModel):
         instance_id: str,
         name: str,
         status: Literal["stopped", "running", "starting"] = "stopped",
-        created: datetime | None = None,
-        pack_version: str | None = None,
-        modloader: ModloaderType | None = None,
-        minecraft_version: str | None = None,
-        path: Path | None = None
+        created: Optional[datetime] = None,
+        pack_version: Optional[str] = None,
+        modloader: Optional[ModloaderType] = None,
+        minecraft_version: Optional[str] = None,
+        path: Optional[Path] = None
     ):
         self.instances.append(InstanceSummary(
             instance_id=instance_id,
@@ -270,7 +268,7 @@ class InstanceRegistry(BaseModel):
         self.instances = [i for i in self.instances if i.instance_id != instance_id]
         self.last_updated = datetime.now()
 
-    def get_instance(self, instance_id: str) -> InstanceConfig | None:
+    def get_instance(self, instance_id: str) -> Optional[InstanceConfig]:
         instance_summary = next((instance for instance in self.instances if instance.instance_id == instance_id), None)
         if instance_summary and instance_summary.path:
             return InstanceConfig.load(instance_summary.path)
