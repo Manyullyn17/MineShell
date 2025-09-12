@@ -1,0 +1,9 @@
+.context-modal {
+    background: 0%;
+}
+
+.context-menu {
+    width: auto;
+    border: double $accent-darken-2 80%;
+    background: $panel 100%;
+}

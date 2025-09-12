@@ -329,6 +329,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             project_id = dep.get('project_id', '')
             project_info = self.dependencies_info.get(project_id)
 
+            # - put text from label widget into checkbox
             is_required = dep.get('dependency_type') == 'required'
             checkbox = Checkbox('', value=is_required, compact=True, id=f"dep-check-{project_id}", classes='modbrowser checkbox')
 
@@ -374,7 +375,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                     checkbox.disabled = True
                 case default:
                     dep_type_styled = f"({dep_type})"
-
+            # - why use a label when checkbox has a text display built in?
             label = Label(f"{dep_name} {dep_type_styled}")
 
             self.dependencies_grid.mount(checkbox, label)

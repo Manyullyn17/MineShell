@@ -18,7 +18,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/mod_list_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
-        Binding('d', "delete", "Delete", show=True),
+        Binding('del', "delete", "Delete", show=True),
         Binding('e', "enable_disable", "Enable/Disable", show=True),
         Binding('u', "update", "Update", show=True),
         Binding('a', "add_mods", "Add Mods", show=True),
@@ -149,7 +149,6 @@ class ModListScreen(FocusNavigationMixin, Screen):
 
     # - implement opening mod details on select (modal with options to update, enable/disable, delete)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        # - add check if selected mod = '' (No results) and do nothing
         if str(event.row_key.value) == '':
             return
         

@@ -14,7 +14,7 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
-    from .context_menu import ContextMenu
+    from .option_modal import OptionModal
     from .delete_modal import DeleteModal
     from .filter_modal import FilterModal
     from .folder_modal import FolderModal
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 # Map attribute names to their modules
 _lazy_map = {
-    "ContextMenu": ".context_menu",
+    "OptionModal": ".option_modal",
     "DeleteModal": ".delete_modal",
     "FilterModal": ".filter_modal",
     "FolderModal": ".folder_modal",

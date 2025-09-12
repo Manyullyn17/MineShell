@@ -10,7 +10,7 @@ from textual.screen import Screen
 from textual.widgets import Button, DataTable, Footer, Header
 
 from screens import InstanceDetailScreen, NewInstanceScreen
-from screens.modals import DeleteModal, ContextMenu
+from screens.modals import DeleteModal, OptionModal
 
 from backend.storage.instance import InstanceRegistry
 from helpers import CustomTable, FocusNavigationMixin
@@ -21,7 +21,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('n', 'new_instance', 'New Instance'),
-        ('d', 'delete', 'Delete'),
+        ('del', 'delete', 'Delete'),
     ] + FocusNavigationMixin.BINDINGS
 
     navigation_map = {
@@ -130,13 +130,16 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
                 def context_handler(result: str | None) -> None:
                     if not result:
                         return
-                    if result == 'delete':
-                        self.action_delete()
-                        return
-                    # - add more buttons
-                    return
+                    match result:
+                        case 'delete':
+                            self.action_delete()
+                        case default:
+                            return
+                        # - add more buttons
                 self.mouse_button = 0 # reset mouse_button to prevent loops
-                self.app.push_screen(ContextMenu((self.mouse_x, self.mouse_y), ['set-default', 'edit', 'delete']), context_handler)
+                # - disable 'set-default' if instance already is default
+                self.app.push_screen(OptionModal(['set_default', 'edit', 'delete'], pos=(self.mouse_x, self.mouse_y)), context_handler)
+                # - what does 'edit' do? i forgot, does it just open the instance?
 
     @on(MouseDown)
     def on_mouse_down(self, event: MouseDown):
