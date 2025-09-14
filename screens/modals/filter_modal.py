@@ -155,6 +155,7 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
                     self.query_one(f'#{id}', Collapsible).collapsed = True
 
     def action_focus_move(self, direction: str):
+        # - if in collapsible, up should focus collapsible, down should focus widget below collapsible
         focused = self.focused
         if not focused:
             return
