@@ -36,7 +36,7 @@ class ModrinthAPI(SourceAPI):
                 "facets": '[["project_type:modpack"]]',
                 "limit": limit
             }
-            results = (await cached_request("search", params))["hits"]
+            results: list[dict] = (await cached_request("search", params))["hits"]
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return '', []
 
@@ -81,11 +81,7 @@ class ModrinthAPI(SourceAPI):
         Sorted newest first.
         """
         try:
-            versions = await cached_request(f"project/{modpack_id}/version", {})
-            # async with httpx.AsyncClient() as client:
-            #     resp = await client.get(f"{MODRINTH_API}/project/{modpack_id}/version", headers=HEADERS, timeout=15.0)
-            #     resp.raise_for_status()
-            #     versions = resp.json()
+            versions: list[dict] = await cached_request(f"project/{modpack_id}/version", {})
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return []
         # Sort newest first
@@ -176,17 +172,7 @@ class ModrinthAPI(SourceAPI):
                     "limit": limit,
                 }
 
-                results = (await cached_request("search", params))["hits"]
-
-                # resp = await client.get(
-                #     f"{MODRINTH_API}/search",
-                #     params=params,
-                #     timeout=15.0,
-                #     headers=HEADERS
-                # )
-                # - should probably add handling for that, probably just crashes as it is now
-                # resp.raise_for_status()
-                # results = resp.json()["hits"]
+                results: list[dict] = (await cached_request("search", params))["hits"]
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return []
 
@@ -230,20 +216,7 @@ class ModrinthAPI(SourceAPI):
                 "game_versions": f'["{mc_version}"]',
                 "loaders": f'["{modloader}"]',
             }
-            versions = await cached_request(f"project/{project_id}/version", params)
-
-            # async with httpx.AsyncClient() as client:
-            #     resp = await client.get(
-            #         f"{MODRINTH_API}/project/{project_id}/version", 
-            #         params={
-            #             "game_versions": f'["{mc_version}"]',
-            #             "loaders": f'["{modloader}"]',
-            #         },
-            #         headers=HEADERS, 
-            #         timeout=15.0
-            #     )
-            #     resp.raise_for_status()
-            #     versions = resp.json()
+            versions: list[dict] = await cached_request(f"project/{project_id}/version", params)
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return []
         # Sort newest first
@@ -266,18 +239,11 @@ class ModrinthAPI(SourceAPI):
         if not project_ids:
             return {}
 
-        # url = f"{MODRINTH_API}/projects?ids={json.dumps(project_ids)}"
-
         try:
             params = {
                 "ids": json.dumps(project_ids),
             }
-            projects_list = await cached_request("projects", params)
-
-            # async with httpx.AsyncClient(timeout=15.0) as client:
-            #     resp = await client.get(url, headers=HEADERS)
-            #     resp.raise_for_status()
-            #     projects_list = resp.json()
+            projects_list: list[dict] = await cached_request("projects", params)
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return {}
         
@@ -306,17 +272,11 @@ class ModrinthAPI(SourceAPI):
         if not version_ids:
             return []
 
-        # url = f"{MODRINTH_API}/versions?ids={json.dumps(version_ids)}"
         try:
             params = {
                 "ids": json.dumps(version_ids),
             }
-            versions_list = await cached_request("versions", params)
-
-            # async with httpx.AsyncClient(timeout=15.0) as client:
-            #     resp = await client.get(url, headers=HEADERS)
-            #     resp.raise_for_status()
-            #     versions_list = resp.json()
+            versions_list: list[dict] = await cached_request("versions", params)
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return []
 

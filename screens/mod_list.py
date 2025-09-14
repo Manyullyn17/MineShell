@@ -10,7 +10,7 @@ from textual.widgets import Button, Static, Footer, Header, Label, DataTable, In
 
 from screens.modals import DeleteModal, FilterModal, SortModal, ModBrowserModal
 
-from backend.storage.instance import InstanceConfig, ModList
+from backend.storage import InstanceConfig, ModList
 from helpers import SmartInput, CustomTable, sanitize_filename, FocusNavigationMixin
 from config import DATE_FORMAT, TIME_FORMAT
 

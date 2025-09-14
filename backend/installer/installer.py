@@ -11,7 +11,7 @@ from backend.api.quilt import ensure_quilt_installer, run_quilt_installer
 # - add other source apis
 import backend.api.modrinth as modrinth
 
-from backend.storage.instance import InstanceConfig, ModEntry
+from backend.storage import InstanceConfig, ModEntry
 from helpers import sanitize_filename, download_file
 
 installers_dir = Path("installers")

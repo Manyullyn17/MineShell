@@ -11,7 +11,7 @@ from textual.widgets import Button, Footer, Header, Static
 from screens import ModListScreen
 from screens.modals import FolderModal
 
-from backend.storage.instance import InstanceRegistry, InstanceConfig
+from backend.storage import InstanceRegistry, InstanceConfig
 from helpers import FocusNavigationMixin
 
 class InstanceDetailScreen(FocusNavigationMixin, Screen):
@@ -120,7 +120,7 @@ class InstanceDetailScreen(FocusNavigationMixin, Screen):
             case 'backups':
                 print('backups') # open backups screen
             case 'folder':
-                # - add way of getting from settings or dynamically
+                # - add way of getting from settings or dynamically (maybe in FolderModal?)
                 user = 'manyullyn'
                 ip = '192.168.0.200'
                 instance_path = self.instance.path.resolve()

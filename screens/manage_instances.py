@@ -12,7 +12,7 @@ from textual.widgets import Button, DataTable, Footer, Header
 from screens import InstanceDetailScreen, NewInstanceScreen
 from screens.modals import DeleteModal, OptionModal
 
-from backend.storage.instance import InstanceRegistry
+from backend.storage import InstanceRegistry
 from helpers import CustomTable, FocusNavigationMixin
 
 class ManageInstancesScreen(FocusNavigationMixin, Screen):
@@ -21,6 +21,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('n', 'new_instance', 'New Instance'),
+        ('d', 'default_instance', 'Set Default Instance'),
         ('del', 'delete', 'Delete'),
     ] + FocusNavigationMixin.BINDINGS
 
@@ -67,7 +68,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         self.table.loading = True
         self.table.clear()
         self.table.columns.clear()
-        columns = ['Name', 'Status', 'Created', 'Pack Version', 'Modloader', 'Minecraft Version']
+        columns = ['Name', 'Status', 'Created', 'Pack Version', 'Modloader', 'Minecraft Version', 'Default']
 
         # Add columns
         for col_name in columns:
@@ -80,6 +81,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         if not self.registry.instances:
             self.table.loading = False
 
+        # - sort default instance first?
         # Populate rows
         for instance in self.registry.instances:
             row = [
@@ -89,7 +91,9 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
                 instance.pack_version or '',
                 instance.formatted_modloader(),
                 instance.minecraft_version or '',
-                instance.created or ''
+                # - show nothing if not default?
+                'True' if instance.instance_id == self.registry.default_instance else False,
+                instance.created or '',
             ]
             self.table.add_row(*row, key=instance.instance_id)
         try:
@@ -127,19 +131,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
                 self.open_instance(selected_instance)
                 self.mouse_button = 0 # reset mouse_button
             case 3: # right click
-                def context_handler(result: str | None) -> None:
-                    if not result:
-                        return
-                    match result:
-                        case 'delete':
-                            self.action_delete()
-                        case default:
-                            return
-                        # - add more buttons
-                self.mouse_button = 0 # reset mouse_button to prevent loops
-                # - disable 'set-default' if instance already is default
-                self.app.push_screen(OptionModal(['set_default', 'edit', 'delete'], pos=(self.mouse_x, self.mouse_y)), context_handler)
-                # - what does 'edit' do? i forgot, does it just open the instance?
+                self.open_context_menu()
 
     @on(MouseDown)
     def on_mouse_down(self, event: MouseDown):
@@ -161,6 +153,10 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
                 self.delete_instance()
 
         self.app.push_screen(NewInstanceScreen(), check_delete)
+
+    def action_default_instance(self):
+        if self.selected_instance:
+            self.registry.set_default_instance(self.selected_instance)
 
     def action_delete(self):
         def check_delete(delete: bool | None) -> None:
@@ -195,3 +191,24 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         instance = self.registry.get_instance(instance_id)
         if instance:
             self.app.push_screen(InstanceDetailScreen(instance))
+
+    def open_context_menu(self):
+        def context_handler(result: str | None) -> None:
+            if not result:
+                return
+            match result:
+                case 'set_default':
+                    self.action_default_instance()
+                case 'edit':
+                    pass
+                case 'delete':
+                    self.action_delete()
+                case default:
+                    pass
+                # - add more buttons
+        self.mouse_button = 0 # reset mouse_button to prevent loops
+        disable_set_default = False
+        if self.registry.default_instance == self.selected_instance:
+            disable_set_default = True
+        self.app.push_screen(OptionModal([('set_default', disable_set_default), 'edit', 'delete'], pos=(self.mouse_x, self.mouse_y)), context_handler)
+        # - what does 'edit' do? i forgot, does it just open the instance?

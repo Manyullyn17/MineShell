@@ -15,7 +15,7 @@ from screens.modals import SelectorModal, TextDisplayModal, ProgressModal
 from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI, FTBAPI
 from backend.api import get_minecraft_versions, get_fabric_versions, get_forge_versions, get_neoforge_versions, get_quilt_versions
 
-from backend.storage.instance import InstanceConfig
+from backend.storage import InstanceConfig
 from helpers import format_date, sanitize_filename, ModloaderType, CustomSelect, SmartInput, FocusNavigationMixin
 
 class NewInstanceScreen(FocusNavigationMixin, Screen):

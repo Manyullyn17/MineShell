@@ -1,12 +1,12 @@
 from textual import on
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.containers import Vertical, Horizontal, Grid, Center
 from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Button, Static, Footer, Header
 
 from screens import InstanceDetailScreen, ManageInstancesScreen
+from backend.storage import InstanceRegistry
 from helpers import FocusNavigationMixin
 
 class MainMenu(FocusNavigationMixin, Screen):
@@ -85,9 +85,11 @@ class MainMenu(FocusNavigationMixin, Screen):
             case 'manage_instances':
                 self.app.push_screen(ManageInstancesScreen())
             case 'open_instance':
-                return
-                # - placeholder until setting and getting default instance is implemented
-                # self.app.push_screen(InstanceDetailScreen(instance_name='Placeholder'))
+                instance = InstanceRegistry().load().get_default_instance()
+                if instance:
+                    self.app.push_screen(InstanceDetailScreen(instance=instance))
+                else:
+                    self.notify('No default instance found.', severity='information', timeout=5)
 
     def update_instance_info(self, instance_name: str, running: bool, stopping: bool=False):
         self.instance_name = instance_name
@@ -109,4 +111,3 @@ class MainMenu(FocusNavigationMixin, Screen):
         self.status_uptime.update(f'Server uptime: {self.uptime}')
         self.status_cpu.update(f'CPU: {self.cpu}')
         self.status_ram.update(f'RAM: {self.ram}')
-

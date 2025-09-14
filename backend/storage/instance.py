@@ -26,38 +26,47 @@ class ModEntry(BaseModel):
     is_override: bool = False
 
     def formatted_date(self, format=DATE_FORMAT) -> str:
-            return format_date(self.install_date.isoformat(), format)
+        """Get install date using default or user specified formatting."""
+        return format_date(self.install_date.isoformat(), format)
     
     def formatted_release_date(self, format=DATE_FORMAT) -> str:
-            if not self.release_date:
-                return ''
-            return format_date(self.release_date.isoformat(), format)
+        """Get release date using default or user specified formatting."""
+        if not self.release_date:
+            return ''
+        return format_date(self.release_date.isoformat(), format)
 
 class ModList(BaseModel):
     # - use Field(default_factory=list)?
     mods: List[ModEntry] = []
+    # - add instance path for use in remove_mod()
 
     @classmethod
     def load(cls, path: Path) -> "ModList":
+        """Load the mod list from a JSON file."""
         return cls.model_validate_json(path.read_text(encoding='utf-8'))
 
     def save(self, path: Path):
+        """Save the mod list to a JSON file."""
         path = path / 'mods.json'
         path.write_text(self.model_dump_json(indent=4), encoding='utf-8')
 
     def get_mod(self, mod_id: str) -> Optional[ModEntry]:
+        """Get a mod by it's id."""
         return next((m for m in self.mods if m.mod_id == mod_id), None)
 
     def has_mod(self, mod_id: str) -> bool:
+        """Check if a mod is in the list."""
         return any(m.mod_id == mod_id for m in self.mods)
 
     def add_mod(self, mod: ModEntry) -> bool:
+        """Add a mod to the list."""
         if self.has_mod(mod.mod_id):
             return False
         self.mods.append(mod)
         return True
 
     def remove_mod(self, mod_id: str, instance_path: Path) -> bool:
+        """Remove a mod by it's id."""
         before = len(self.mods)
         mod = self.get_mod(mod_id)
         if not mod:
@@ -72,6 +81,8 @@ class ModList(BaseModel):
         return len(self.mods) < before
 
     def enable_mod(self, mod_id: str) -> bool:
+        """Enable a mod by it's id."""
+        # - actually rename the file
         mod = self.get_mod(mod_id)
         if not mod:
             return False
@@ -79,6 +90,8 @@ class ModList(BaseModel):
         return True
 
     def disable_mod(self, mod_id: str) -> bool:
+        """Disable a mod by it's id."""
+        # - actually rename the file
         mod = self.get_mod(mod_id)
         if not mod:
             return False
@@ -86,6 +99,15 @@ class ModList(BaseModel):
         return True
 
     def to_dict(self, dateformat: str = DATE_FORMAT) -> list[dict[str, str | list[str]]]:
+        """Convert the ModList to a list of dictionaries for display.
+
+        Args:
+            dateformat (str, optional): The format string for dates. Defaults to DATE_FORMAT.
+
+        Returns:
+            modlist (list[dict[str, str | list[str]]]): A list of dictionaries, each representing a mod.
+        """
+
         modlist: list[dict[str, str | list[str]]] = []
 
         for mod in self.mods:
@@ -149,6 +171,7 @@ class InstanceConfig(BaseModel):
     }
 
     def formatted_modloader(self) -> str:
+        """Get modloader display name."""
         return self.MODLOADER_DISPLAY.get(self.modloader, self.modloader.capitalize())
 
     # ----------------------------
@@ -156,6 +179,7 @@ class InstanceConfig(BaseModel):
     # ----------------------------
     @classmethod
     def load(cls, path: Path) -> "InstanceConfig":
+        """Load the instance configuration from a folder."""
         instance_json = path / "instance.json"
         mods_json = path / "mods" / "mods.json"
 
@@ -180,6 +204,7 @@ class InstanceConfig(BaseModel):
         return instance
 
     def save(self):
+        """Save the instance configuration."""
         # Ensure instance folder exists
         self.path.mkdir(parents=True, exist_ok=True)
 
@@ -214,11 +239,13 @@ class InstanceSummary(BaseModel):
     }
 
     def formatted_modloader(self) -> str:
+        """Get modloader display name."""
         if not self.modloader:
             return ''
         return self.MODLOADER_DISPLAY.get(self.modloader, self.modloader.capitalize())
     
     def formatted_date(self, format=DATE_FORMAT) -> str:
+        """Get created date using default or user specified formatting."""
         if not self.created:
             return ''
         return format_date(self.created.isoformat(), format)
@@ -226,10 +253,11 @@ class InstanceSummary(BaseModel):
 class InstanceRegistry(BaseModel):
     instances: List[InstanceSummary] = []
     last_updated: Optional[datetime] = None
-    # - add default instance
+    default_instance: Optional[str] = None
 
     @classmethod
     def load(cls, folder: Path=Path('instances')) -> "InstanceRegistry":
+        """Load the registry from a JSON file."""
         registry_json = folder / "registry.json"
         if registry_json.exists():
             registry = cls.model_validate_json(registry_json.read_text(encoding="utf-8"))
@@ -237,6 +265,7 @@ class InstanceRegistry(BaseModel):
         return cls(instances=[])
 
     def save(self, folder: Path=Path('instances')):
+        """Save the registry to a JSON file."""
         self.last_updated = datetime.now()
         registry_json = folder / "registry.json"
         registry_json.write_text(self.model_dump_json(indent=2))
@@ -252,6 +281,7 @@ class InstanceRegistry(BaseModel):
         minecraft_version: Optional[str] = None,
         path: Optional[Path] = None
     ):
+        """Add a new instance to the registry."""
         self.instances.append(InstanceSummary(
             instance_id=instance_id,
             name=name,
@@ -265,12 +295,22 @@ class InstanceRegistry(BaseModel):
         self.last_updated = datetime.now()
 
     def remove_instance(self, instance_id: str):
+        """Remove an instance by its ID without saving the registry."""
         self.instances = [i for i in self.instances if i.instance_id != instance_id]
         self.last_updated = datetime.now()
 
     def get_instance(self, instance_id: str) -> Optional[InstanceConfig]:
+        """Get an instance by its ID."""
         instance_summary = next((instance for instance in self.instances if instance.instance_id == instance_id), None)
         if instance_summary and instance_summary.path:
             return InstanceConfig.load(instance_summary.path)
         return None
     
+    def get_default_instance(self) -> Optional[InstanceConfig]:
+        """Get the default instance."""
+        return self.get_instance(self.default_instance) if self.default_instance else None
+
+    def set_default_instance(self, instance_id: str):
+        """Set the default instance and save the registry."""
+        self.default_instance = instance_id
+        self.save()
