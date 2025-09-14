@@ -57,6 +57,15 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         self.sub_title = 'Manage Instances'
         self.registry = InstanceRegistry.load()
 
+        columns = ['Name', 'Status', 'Created', 'Pack Version', 'Modloader', 'Minecraft Version', 'Default']
+
+        # Add columns
+        for col_name in columns:
+            self.table.add_column(col_name, key=col_name.lower().replace(' ', '_'))
+
+        # Add hidden datetime column for sorting
+        self.table.add_column('datetime', width=0)
+
     @on(ScreenResume)
     def on_screen_resume(self, event: ScreenResume) -> None:
         self.registry = InstanceRegistry.load() # reload registry
@@ -67,21 +76,11 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
     async def load_table(self):
         self.table.loading = True
         self.table.clear()
-        self.table.columns.clear()
-        columns = ['Name', 'Status', 'Created', 'Pack Version', 'Modloader', 'Minecraft Version', 'Default']
-
-        # Add columns
-        for col_name in columns:
-            self.table.add_column(col_name)
-        
-        # Add hidden datetime column for sorting
-        self.table.add_column('datetime', width=0)
 
         # If registry is empty, just show an empty table
         if not self.registry.instances:
             self.table.loading = False
 
-        # - sort default instance first?
         # Populate rows
         for instance in self.registry.instances:
             row = [
@@ -91,11 +90,14 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
                 instance.pack_version or '',
                 instance.formatted_modloader(),
                 instance.minecraft_version or '',
-                # - show nothing if not default?
-                'True' if instance.instance_id == self.registry.default_instance else False,
+                True if instance.instance_id == self.registry.default_instance else '',
                 instance.created or '',
             ]
             self.table.add_row(*row, key=instance.instance_id)
+
+        # sort table, default instance first, then by name
+        self.table.sort(*['default', 'name'], key=lambda row: (not row[0], row[1].lower()))
+
         try:
             row_index = self.table.get_row_index(self.selected_instance) if self.selected_instance else None
         except:
