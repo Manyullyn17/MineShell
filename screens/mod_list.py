@@ -18,7 +18,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/mod_list_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
-        Binding('del', "delete", "Delete", show=True),
+        Binding('delete', "delete", "Delete", show=True),
         Binding('e', "enable_disable", "Enable/Disable", show=True),
         Binding('u', "update", "Update", show=True),
         Binding('a', "add_mods", "Add Mods", show=True),
@@ -26,15 +26,15 @@ class ModListScreen(FocusNavigationMixin, Screen):
         Binding('s', "sort", "Sort", show=True),
     ] + FocusNavigationMixin.BINDINGS
 
-    navigation_map = {
-        "modlist-search":           {"left": "",                         "up": "",  "down": "modlist-table", "right": "modlist-filter-button"},
-        "modlist-filter-button":    {"left": "modlist-search",           "up": "",  "down": "modlist-table", "right": "modlist-sort-button"},
-        "modlist-sort-button":      {"left": "modlist-filter-button",    "up": "",  "down": "modlist-table", "right": "modlist-update-button"},
-        "modlist-update-button":    {"left": "modlist-sort-button",      "up": "",  "down": "modlist-table", "right": "modlist-add-mod-button"},
-        "modlist-add-mod-button":   {"left": "modlist-update-button",    "up": "",  "down": "modlist-table", "right": "modlist-back-button"},
-        "modlist-back-button":      {"left": "modlist-add-mod-button",   "up": "",  "down": "modlist-table", "right": ""},
-        "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": "modlist-filter-button"},
-    }
+    # navigation_map = {
+    #     "modlist-search":           {"left": "",                         "up": "",  "down": "modlist-table", "right": "modlist-filter-button"},
+    #     "modlist-filter-button":    {"left": "modlist-search",           "up": "",  "down": "modlist-table", "right": "modlist-sort-button"},
+    #     "modlist-sort-button":      {"left": "modlist-filter-button",    "up": "",  "down": "modlist-table", "right": "modlist-update-button"},
+    #     "modlist-update-button":    {"left": "modlist-sort-button",      "up": "",  "down": "modlist-table", "right": "modlist-add-mod-button"},
+    #     "modlist-add-mod-button":   {"left": "modlist-update-button",    "up": "",  "down": "modlist-table", "right": "modlist-back-button"},
+    #     "modlist-back-button":      {"left": "modlist-add-mod-button",   "up": "",  "down": "modlist-table", "right": ""},
+    #     "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": "modlist-filter-button"},
+    # }
 
     first_load = True
 
@@ -67,14 +67,14 @@ class ModListScreen(FocusNavigationMixin, Screen):
                 yield self.mod_count
 
             with Horizontal(id='modlist-buttons'):
-                yield SmartInput(placeholder='Search Modlist', id='modlist-search', classes='modlist search')
-                yield Button('Filter', id='modlist-filter-button', classes='modlist button')
-                yield Button('Sort', id='modlist-sort-button', classes='modlist button') # sort by name and install date, normal and reverse
-                yield Button('Update', id='modlist-update-button', classes='modlist button')
-                yield Button('Add Mods', id='modlist-add-mod-button', classes='modlist button')
-                yield Button('Back', id='modlist-back-button', classes='modlist button')
+                yield SmartInput(placeholder='Search Modlist', id='modlist-search', classes='focusable modlist search')
+                yield Button('Filter', id='modlist-filter-button', classes='focusable modlist button')
+                yield Button('Sort', id='modlist-sort-button', classes='focusable modlist button') # sort by name and install date, normal and reverse
+                yield Button('Update', id='modlist-update-button', classes='focusable modlist button')
+                yield Button('Add Mods', id='modlist-add-mod-button', classes='focusable modlist button')
+                yield Button('Back', id='modlist-back-button', classes='focusable modlist button')
 
-            self.table = CustomTable(classes='modlist table', id='modlist-table', cursor_type='row', zebra_stripes=True)
+            self.table = CustomTable(id='modlist-table', cursor_type='row', zebra_stripes=True, classes='focusable modlist table')
             yield self.table
             self.filter_label = Label(id='modlist-filter-label')
             yield self.filter_label

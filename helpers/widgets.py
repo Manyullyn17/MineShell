@@ -2,11 +2,14 @@ from typing import TypeVar, Protocol, Any
 
 from textual import on
 from textual.binding import Binding
+from textual.containers import VerticalScroll
 from textual.css.query import DOMQuery
 from textual.events import MouseDown
+from textual.geometry import Region
 from textual.screen import ModalScreen
 from textual.widget import Widget
-from textual.widgets import Select, Input, DataTable
+from textual.widgets import Select, Input, DataTable, Collapsible
+
 class CustomSelect(Select):
     def on_key(self, event):
         """Override to prevent up/down from opening the menu."""
@@ -118,6 +121,7 @@ class CustomModal(ModalScreen[ScreenResultType]):
 class FocusableScreen(Protocol):
     focused: Widget
     navigation_map: dict[str, dict[str, str]]
+    size: property
     def query_one(self, query: str, **kwargs: Any) -> Widget: ...
     def query(self, selector: str | None = None) -> DOMQuery[Widget]: ...
     def notify(self, message: str, **kwargs: Any) -> None: ...
@@ -131,68 +135,110 @@ class FocusNavigationMixin:
         Binding("right", "focus_move('right')", show=False),
     ]
 
-    # def action_focus_move(self: FocusableScreen, direction: str):
-    #     focused = self.focused
-    #     if not focused or not focused.id:
-    #         return
-    #     try:
-    #         next_id = self.navigation_map.get(focused.id, {}).get(direction)
-    #         if next_id:
-    #             next_widget = self.query_one(f'#{next_id}')
-    #             next_widget.focus()
-    #     except Exception as e:
-    #         self.notify(f"Failed to move focus. {e}", severity="error", timeout=5)
-
     def _find_next_focus(self: FocusableScreen, current: Widget, direction: str) -> Widget | None:
-        current_region = current.region
-        current_cx = current_region.x + current_region.width // 2
-        current_cy = current_region.y + current_region.height // 2
-        current_left = current_region.x
-        current_right = current_region.right
-        current_top = current_region.y
-        current_bottom = current_region.bottom
+        def get_candidates(self) -> list[Widget]:
+            candidates = []
+            for w in self.query('.focusable'):
+                if w == current or not w.region.intersection(proj_region):
+                    continue
 
-        candidates = [w for w in self.query("*") if w.can_focus and w.id != current.id]
+                if w.focusable:
+                    candidates.append(w)
+                elif isinstance(w, Collapsible):
+                    # find the CollapsibleTitle child of the collapsible
+                    title = w.query_one('CollapsibleTitle')
+                    if title:
+                        candidates.append(title)
+            return candidates
 
-        def score(widget: Widget) -> float:
-            r = widget.region
-            w_left = r.x
-            w_right = r.right
-            w_top = r.y
-            w_bottom = r.bottom
-            dx = dy = 0
+        # Get focused widget region
+        focused_region = current.region
 
-            # - make it prioritize the direction navigation is heading in
-            if direction == "left" and w_right <= current_left:
-                dx = current_left - w_right
-                # vertical distance: distance from current top/bottom to closest candidate edge
-                dy = max(0, current_top - w_bottom, w_top - current_bottom)
+        # Projection rectangle in the moving direction
+        proj_region = Region.from_offset(focused_region.offset, focused_region.size)
 
-            if direction == "right" and w_left >= current_right:
-                dx = w_left - current_right
-                dy = max(0, current_top - w_bottom, w_top - current_bottom)
+        # Adjust projection depending on direction
+        if direction == "up":
+            proj_region = Region(
+                focused_region.x,
+                0,
+                focused_region.width,
+                focused_region.y
+            )
+        elif direction == "down":
+            proj_region = Region(
+                focused_region.x,
+                focused_region.y, # use top edge to allow detection of nested widgets in collapsible
+                focused_region.width,
+                self.size.height - focused_region.bottom,
+            )
+        elif direction == "left":
+            proj_region = Region(
+                0,
+                focused_region.y,
+                focused_region.x - 1,
+                focused_region.height,
+            )
+        elif direction == "right":
+            proj_region = Region(
+                focused_region.right,
+                focused_region.y,
+                self.size.width - focused_region.right,
+                focused_region.height,
+            )
 
-            if direction == "up" and w_bottom <= current_top:
-                dy = current_top - w_bottom
-                dx = max(0, current_left - w_right, w_left - current_right)
+        candidates = get_candidates(self)
+        
+        # If nothing intersects, expand projection to full row/column
+        if not candidates:
+            if direction == "up":
+                proj_region = Region(
+                    0,
+                    0,
+                    self.size.width,
+                    focused_region.y - 1
+                )
+            elif direction == "down":
+                proj_region = Region(
+                    0,
+                    focused_region.bottom,
+                    self.size.width,
+                    self.size.height - focused_region.bottom,
+                )
+            elif direction == "left":
+                proj_region = Region(
+                    0,
+                    0,
+                    focused_region.x - 1,
+                    self.size.height,
+                )
+            elif direction == "right":
+                proj_region = Region(
+                    focused_region.right,
+                    0,
+                    self.size.width - focused_region.right,
+                    self.size.height,
+                )
+            candidates = get_candidates(self)
 
-            if direction == "down" and w_top >= current_bottom:
-                dy = w_top - current_bottom
-                dx = max(0, current_left - w_right, w_left - current_right)
+        # Pick the nearest candidate
+        if candidates:
+            def distance(w: Widget):
+                fx, fy = focused_region.center
+                # clamp the focus point to the bounds of the target widget
+                tx = min(max(fx, w.region.x), w.region.right)
+                ty = min(max(fy, w.region.y), w.region.bottom)
+                dx = tx - fx
+                dy = (ty - fy) * 10
+                return (dx**2 + dy**2)**0.5
 
-            if dx or dy:
-                return dx + dy*2
-
-            return float("inf")  # not in the correct direction
-
-        scored = [(score(w), w) for w in candidates if score(w) < float("inf")]
-        if not scored:
-            return None
-
-        return min(scored, key=lambda sw: sw[0])[1]
+            next_widget = min(candidates, key=distance)
+            return next_widget
 
     def action_focus_move(self: FocusableScreen, direction: str):
         focused = self.focused
+        if isinstance(focused.parent, Collapsible):
+            focused = focused.parent
         if not focused or not focused.id:
             return
         try:
@@ -201,3 +247,16 @@ class FocusNavigationMixin:
                 next_widget.focus()
         except Exception as e:
             self.notify(f"Failed to move focus. {e}", severity="error", timeout=5)
+
+class CustomVerticalScroll(VerticalScroll):
+    def on_key(self, event):
+        """Override to make up/down move focus instead of scrolling."""
+        if event.key in ("up", "down"):
+            # Call the screen's focus movement
+            screen = self.app.screen
+            if hasattr(screen, "action_focus_move"):
+                getattr(screen, "action_focus_move")(event.key)
+            event.stop()
+            return
+        # Fallback to normal VerticalScroll behavior
+        return super()._on_key(event)

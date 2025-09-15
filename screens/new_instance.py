@@ -26,27 +26,27 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
         ('i', 'install', 'Install'),
     ] + FocusNavigationMixin.BINDINGS
 
-    navigation_map_modpack = {
-        "source_select":        {"left":"",                     "up": "",                   "down": "project_input",        "right": "search_button"},
-        "project_input":        {"left":"",                     "up": "source_select",      "down": "version_select",       "right": "search_button"},
-        "search_button":        {"left":"project_input",        "up": "source_select",      "down": "modlist_button",       "right": "install"},
-        "version_select":       {"left":"",                     "up": "project_input",      "down": "instance_name_input",  "right": "modlist_button"},
-        "modlist_button":       {"left":"version_select",       "up": "search_button",      "down": "changelog_button",     "right": "install"},
-        "instance_name_input":  {"left":"",                     "up": "version_select",     "down": "install",              "right": "changelog_button"},
-        "changelog_button":     {"left":"instance_name_input",  "up": "modlist_button",     "down": "install",              "right": "install"},
-        "install":              {"left":"changelog_button",     "up": "changelog_button",   "down": "",                     "right": "back"},
-        "back":                 {"left":"install",              "up": "changelog_button",   "down": "",                     "right": ""},
-    }
+    # navigation_map_modpack = {
+    #     "source_select":        {"left":"",                     "up": "",                   "down": "project_input",        "right": "search_button"},
+    #     "project_input":        {"left":"",                     "up": "source_select",      "down": "version_select",       "right": "search_button"},
+    #     "search_button":        {"left":"project_input",        "up": "source_select",      "down": "modlist_button",       "right": "install"},
+    #     "version_select":       {"left":"",                     "up": "project_input",      "down": "instance_name_input",  "right": "modlist_button"},
+    #     "modlist_button":       {"left":"version_select",       "up": "search_button",      "down": "changelog_button",     "right": "install"},
+    #     "instance_name_input":  {"left":"",                     "up": "version_select",     "down": "install",              "right": "changelog_button"},
+    #     "changelog_button":     {"left":"instance_name_input",  "up": "modlist_button",     "down": "install",              "right": "install"},
+    #     "install":              {"left":"changelog_button",     "up": "changelog_button",   "down": "",                     "right": "back"},
+    #     "back":                 {"left":"install",              "up": "changelog_button",   "down": "",                     "right": ""},
+    # }
 
-    navigation_map_modloader = {
-        "source_select":                {"left":"",                             "up": "install",                    "down": "instance_name_input",          "right": "install"},
-        "instance_name_input":          {"left":"",                             "up": "source_select",              "down": "mc_version_selector",          "right": "install"},
-        "mc_version_selector":          {"left":"",                             "up": "instance_name_input",        "down": "modloader_selector",           "right": "install"},
-        "modloader_selector":           {"left":"",                             "up": "mc_version_selector",        "down": "modloader_version_selector",   "right": "install"},
-        "modloader_version_selector":   {"left":"",                             "up": "modloader_selector",         "down": "install",                      "right": "install"},
-        "install":                      {"left":"modloader_version_selector",   "up": "modloader_version_selector", "down": "",                             "right": "back"},
-        "back":                         {"left":"install",                      "up": "modloader_version_selector", "down": "",                             "right": ""},
-    }
+    # navigation_map_modloader = {
+    #     "source_select":                {"left":"",                             "up": "install",                    "down": "instance_name_input",          "right": "install"},
+    #     "instance_name_input":          {"left":"",                             "up": "source_select",              "down": "mc_version_selector",          "right": "install"},
+    #     "mc_version_selector":          {"left":"",                             "up": "instance_name_input",        "down": "modloader_selector",           "right": "install"},
+    #     "modloader_selector":           {"left":"",                             "up": "mc_version_selector",        "down": "modloader_version_selector",   "right": "install"},
+    #     "modloader_version_selector":   {"left":"",                             "up": "modloader_selector",         "down": "install",                      "right": "install"},
+    #     "install":                      {"left":"modloader_version_selector",   "up": "modloader_version_selector", "down": "",                             "right": "back"},
+    #     "back":                         {"left":"install",                      "up": "modloader_version_selector", "down": "",                             "right": ""},
+    # }
 
     sources = {
         "Modrinth": {
@@ -105,32 +105,32 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
         with Grid(id='new_instance_grid'):
             # Source selector
             yield Static('Source:', classes='text')
-            yield CustomSelect.from_values(list(self.sources.keys()), allow_blank=False, id='source_select')
+            yield CustomSelect.from_values(list(self.sources.keys()), allow_blank=False, id='source_select', classes='focusable')
 
             yield Static(id='spacer1')
             
             # Project / Instance fields for Modpacks
             yield Static('Project:', classes='text modpack')
-            self.search = SmartInput(placeholder='Search Modpack', id='project_input', classes='input modpack')
+            self.search = SmartInput(placeholder='Search Modpack', id='project_input', classes='focusable input modpack')
             yield self.search
-            yield Button('Search', id='search_button', classes='button modpack')
+            yield Button('Search', id='search_button', classes='focusable button modpack')
 
             yield Static(id='spacer2', classes='modpack')
 
             yield Static('Version:', classes='text modpack')
-            self.version_selector = Button('Select Version', id='version_select', classes='button modpack')
+            self.version_selector = Button('Select Version', id='version_select', classes='focusable button modpack')
             yield self.version_selector
-            yield Button('Modlist', id='modlist_button', classes='button modpack')
+            yield Button('Modlist', id='modlist_button', classes='focusable button modpack')
 
             yield Static(id='spacer3', classes='modpack')
 
             # Shared Fields
             yield Static('Instance Name:', classes='text')
-            self.instance_name = SmartInput(placeholder='Instance Name', id='instance_name_input', classes='input')
+            self.instance_name = SmartInput(placeholder='Instance Name', id='instance_name_input', classes='focusable input')
             yield self.instance_name
             # Shared Fields end
 
-            yield Button('View Changelog', id='changelog_button', classes='button modpack')
+            yield Button('View Changelog', id='changelog_button', classes='focusable button modpack')
 
             yield Static(id='spacer4', classes='modpack')
 
@@ -146,7 +146,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             yield Static(id='spacer5', classes='modloader')
 
             yield Static('Minecraft Version:', classes='text modloader')
-            self.mc_version_selector = Button('Select Version', id='mc_version_selector', classes='button modloader') # replace with Select if release date doesn't matter
+            self.mc_version_selector = Button('Select Version', id='mc_version_selector', classes='focusable button modloader')
             yield self.mc_version_selector
 
             yield Static(id='spacer6', classes='modloader')
@@ -156,22 +156,22 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
                 ["Fabric", "Forge", "NeoForge", "Quilt"],
                 allow_blank=False, 
                 id='modloader_selector', 
-                classes='select modloader'
+                classes='focusable select modloader'
                 )
             yield self.modloader_selector
 
             yield Static(id='spacer7', classes='modloader')
 
             yield Static('Modloader Version:', classes='text modloader')
-            self.modloader_version_selector = Button('Select Version', id='modloader_version_selector', classes='button modloader') # replace with Select if not showing beta status
+            self.modloader_version_selector = Button('Select Version', id='modloader_version_selector', classes='focusable button modloader')
             yield self.modloader_version_selector
 
             yield Static(id='spacer8', classes='modloader')
 
             # Buttons
             with Horizontal(id='button-row'):
-                yield Button('Install', id='install', classes='newinstance button')
-                yield Button('Back', id='back', classes='newinstance button')
+                yield Button('Install', id='install', classes='focusable newinstance button')
+                yield Button('Back', id='back', classes='focusable newinstance button')
 
         yield Footer()
 
@@ -208,28 +208,25 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
                 return
 
     async def open_modpack_selector(self, query: str):
-        # - get limit from settings, add way to load more
-        # title, data = await self.source_api.search_modpacks(query, limit=20)
-
-        # if not title or not data:
-        #     self.notify(f"Couldn't load Modpacks. Query: '{query}'", severity='error', timeout=5)
-        #     return
-
         async def modpack_selected(result: str | tuple[str, list[dict[str, str | list[str]]]] | None) -> None:
             if result and isinstance(result, tuple):
                 selected, data = result
                 selected_pack = next((r for r in data if r["slug"] == selected), None)
                 if selected_pack: # ["Name", "Author", "Downloads", "Modloader", "Categories", "Slug", "Description"]
                     self.modlist = [] # clear modlist when changing modpack
+                    # save modpack name and slug
                     self.modpack_name = str(selected_pack["name"])
                     self.modpack_slug = str(selected_pack["slug"])
+                    # show modpack info in ui
                     self.instance_name.value = self.modpack_name
                     self.description.update(str(selected_pack["description"]))
                     self.author.update(str(selected_pack["author"]))
+                    # get modpack versions
                     self.versions = await self.source_api.get_modpack_versions(str(selected_pack["slug"]))
                     if not self.versions:
                         self.notify(f"Couldn't get Modpack versions for {self.modpack_name}.", severity='error', timeout=5)
                     else:
+                        # select newest version
                         self.version_selector.label = self.versions[0]["version_number"]
                         self.selected_modpack_version = self.versions[0]
             self.query_one('#search_button').loading = False
@@ -245,17 +242,6 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             ),
             modpack_selected
         )
-
-        # await self.app.push_screen(
-        #     SelectorModal(
-        #         title=title,
-        #         choices=data,
-        #         return_field='slug',
-        #         hide_return_field=True,
-        #         filter_columns=["author", "modloader", "categories"]
-        #     ),
-        #     modpack_selected
-        # )
 
     def action_back(self):
         self.app.pop_screen()
@@ -294,13 +280,13 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
     def set_install_mode(self, mode: str):
         if mode == 'modpack':
             self.install_mode = 'modpack'
-            self.navigation_map = self.navigation_map_modpack
+            # self.navigation_map = self.navigation_map_modpack
             # Hide modloader widgets, show modpack widgets
             self.query('.modloader').add_class('hidden')
             self.query('.modpack').remove_class('hidden')
         else:
             self.install_mode = 'modloader'
-            self.navigation_map = self.navigation_map_modloader
+            # self.navigation_map = self.navigation_map_modloader
             # Hide modpack widgets, show modloader widgets
             self.query('.modpack').add_class('hidden')
             self.query('.modloader').remove_class('hidden')

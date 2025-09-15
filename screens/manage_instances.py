@@ -22,14 +22,14 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         Binding('escape', 'back', show=False),
         ('n', 'new_instance', 'New Instance'),
         ('d', 'default_instance', 'Set Default Instance'),
-        ('del', 'delete', 'Delete'),
+        ('delete', 'delete', 'Delete'),
     ] + FocusNavigationMixin.BINDINGS
 
-    navigation_map = {
-            "instances_list":   {"left":"",                 "up": "",               "down": "new_instance", "right": "new_instance"},
-            "new_instance":     {"left":"instances_list",   "up": "instances_list", "down": "",             "right": "back"},
-            "back":             {"left":"new_instance",     "up": "instances_list", "down": "",             "right": ""},
-    }
+    # navigation_map = {
+    #         "instances_list":   {"left":"",                 "up": "",               "down": "new_instance", "right": "new_instance"},
+    #         "new_instance":     {"left":"instances_list",   "up": "instances_list", "down": "",             "right": "back"},
+    #         "back":             {"left":"new_instance",     "up": "instances_list", "down": "",             "right": ""},
+    # }
 
     selected_instance: str | None = None # instance_id
 
@@ -41,21 +41,24 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
 
     mouse_y: int = 0
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.registry = InstanceRegistry.load()
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
-        self.table = CustomTable(id='instances_list', cursor_type='row', zebra_stripes=True)
+        self.table = CustomTable(id='instances_list', cursor_type='row', zebra_stripes=True, classes='focusable')
         yield self.table
 
         with Horizontal(id='button-row'):
-            yield Button('New Instance', id='new_instance', classes='instancebutton')
-            yield Button('Back', id='back', classes='instancebutton')
+            yield Button('New Instance', id='new_instance', classes='focusable instancebutton')
+            yield Button('Back', id='back', classes='focusable instancebutton')
 
         yield Footer()
 
     def on_mount(self) -> None:
         self.sub_title = 'Manage Instances'
-        self.registry = InstanceRegistry.load()
 
         columns = ['Name', 'Status', 'Created', 'Pack Version', 'Modloader', 'Minecraft Version', 'Default']
 
@@ -125,6 +128,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
+        self.refresh_bindings()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         match self.mouse_button:
@@ -159,6 +163,8 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
     def action_default_instance(self):
         if self.selected_instance:
             self.registry.set_default_instance(self.selected_instance)
+            self.load_table()
+            self.refresh_bindings()
 
     def action_delete(self):
         def check_delete(delete: bool | None) -> None:
@@ -214,3 +220,9 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
             disable_set_default = True
         self.app.push_screen(OptionModal([('set_default', disable_set_default), 'edit', 'delete'], pos=(self.mouse_x, self.mouse_y)), context_handler)
         # - what does 'edit' do? i forgot, does it just open the instance?
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == 'default_instance' and self.registry and self.registry.default_instance == self.selected_instance:
+            return False
+        return True
+    

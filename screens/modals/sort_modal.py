@@ -13,12 +13,12 @@ class SortModal(FocusNavigationMixin, CustomModal[tuple[str, bool]]):
             Binding('escape', 'esc', show=False),
         ] + FocusNavigationMixin.BINDINGS
     
-    navigation_map = {
-        "sort-select":      {"left": "", "up": "", "down": "sort-reverse",     "right": ""},
-        "sort-reverse":     {"left": "", "up": "", "down": "sort-done-button", "right": ""},
-        "sort-back-button": {"left": "", "up": "", "down": "",                 "right": "sort-done-button"},
-        "sort-done-button": {"left": "sort-back-button", "up": "", "down": "", "right": ""},
-    }
+    # navigation_map = {
+    #     "sort-select":      {"left": "", "up": "", "down": "sort-reverse",     "right": ""},
+    #     "sort-reverse":     {"left": "", "up": "", "down": "sort-done-button", "right": ""},
+    #     "sort-back-button": {"left": "", "up": "", "down": "",                 "right": "sort-done-button"},
+    #     "sort-done-button": {"left": "sort-back-button", "up": "", "down": "", "right": ""},
+    # }
 
     def __init__(self, sortable_columns:list[str]):
         super().__init__()
@@ -29,12 +29,12 @@ class SortModal(FocusNavigationMixin, CustomModal[tuple[str, bool]]):
 
         with self.grid:
             yield Static('Column: ', classes='sort text')
-            self.sort_select = CustomSelect.from_values(self.sortable_columns, id='sort-select', classes='sort select', allow_blank=False)
+            self.sort_select = CustomSelect.from_values(self.sortable_columns, id='sort-select', classes='focusable sort select', allow_blank=False)
             yield self.sort_select
-            self.reverse = Checkbox(label='Reverse', id='sort-reverse', classes='sort checkbox')
+            self.reverse = Checkbox(label='Reverse', id='sort-reverse', classes='focusable sort checkbox')
             yield self.reverse
-            yield Button('Back', id='sort-back-button', classes='sort button')
-            yield Button('Done', id='sort-done-button', classes='sort button')
+            yield Button('Back', id='sort-back-button', classes='focusable sort button')
+            yield Button('Done', id='sort-done-button', classes='focusable sort button')
 
         self.grid.border_title = 'Sort Table'
         

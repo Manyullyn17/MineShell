@@ -15,13 +15,13 @@ class MainMenu(FocusNavigationMixin, Screen):
         ('crtl+q', 'quit', 'Quit'),
     ] + FocusNavigationMixin.BINDINGS
 
-    navigation_map = {
-        "start_stop":       {"left":"", "up": "settings",           "down": "restart",          "right": ""},
-        "restart":          {"left":"", "up": "start_stop",         "down": "open_instance",    "right": ""},
-        "open_instance":    {"left":"", "up": "restart",            "down": "manage_instances", "right": ""},
-        "manage_instances": {"left":"", "up": "open_instance",      "down": "settings",         "right": ""},
-        "settings":         {"left":"", "up": "manage_instances",   "down": "start_stop",       "right": ""},
-    }
+    # navigation_map = {
+    #     "start_stop":       {"left":"", "up": "settings",           "down": "restart",          "right": ""},
+    #     "restart":          {"left":"", "up": "start_stop",         "down": "open_instance",    "right": ""},
+    #     "open_instance":    {"left":"", "up": "restart",            "down": "manage_instances", "right": ""},
+    #     "manage_instances": {"left":"", "up": "open_instance",      "down": "settings",         "right": ""},
+    #     "settings":         {"left":"", "up": "manage_instances",   "down": "start_stop",       "right": ""},
+    # }
 
     def compose(self) -> ComposeResult:
         self.instance_name = ''
@@ -35,11 +35,11 @@ class MainMenu(FocusNavigationMixin, Screen):
 
         with Horizontal():
             with Vertical(id='buttons'):
-                yield Button('Start/Stop', id='start_stop', classes='mainbutton')
-                yield Button('Restart', id='restart', classes='mainbutton')
-                yield Button('Open Instance', id='open_instance', classes='mainbutton')
-                yield Button('Manage Instances', id='manage_instances', classes='mainbutton')
-                yield Button('Settings', id='settings', classes='mainbutton')
+                yield Button('Start/Stop', id='start_stop', classes='focusable mainbutton')
+                yield Button('Restart', id='restart', classes='focusable mainbutton')
+                yield Button('Open Instance', id='open_instance', classes='focusable mainbutton')
+                yield Button('Manage Instances', id='manage_instances', classes='focusable mainbutton')
+                yield Button('Settings', id='settings', classes='focusable mainbutton')
 
             with Vertical():
                 self.instance_info = Static(id='instance-info')

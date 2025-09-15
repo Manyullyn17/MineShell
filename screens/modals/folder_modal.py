@@ -12,10 +12,10 @@ class FolderModal(FocusNavigationMixin, CustomModal):
             Binding('escape', 'back', show=False),
         ] + FocusNavigationMixin.BINDINGS
     
-    navigation_map = {
-        "ftp-link": {"left":"", "up": "", "down": "back", "right": ""},
-        "back":     {"left":"", "up": "ftp-link", "down": "", "right": ""},
-    }
+    # navigation_map = {
+    #     "ftp-link": {"left":"", "up": "", "down": "back", "right": ""},
+    #     "back":     {"left":"", "up": "ftp-link", "down": "", "right": ""},
+    # }
     
     def __init__(self, instance_name: str, folder_path: str, ftp_link: str):
         super().__init__()
@@ -30,24 +30,12 @@ class FolderModal(FocusNavigationMixin, CustomModal):
             yield Label(f"{self.instance_name}", id="instance-name", classes='folder label')
             yield Static("Folder Path:", classes='folder static')
             yield Label(f"{self.folder_path}", id="folder-path", classes='folder label')
-            yield Link("Open Folder via SFTP", url=self.ftp_link, id="ftp-link", classes='folder link')
-            yield Container(Button("Back", id="back", classes='folder button'), id='folder-button-container')
+            yield Link("Open Folder via SFTP", url=self.ftp_link, id="ftp-link", classes='focusable folder link')
+            yield Container(Button("Back", id="back", classes='focusable folder button'), id='folder-button-container')
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "back":
             self.app.pop_screen()
-
-    def action_focus_move(self, direction: str):
-        focused = self.focused
-        if not focused or not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def action_back(self):
         self.dismiss()

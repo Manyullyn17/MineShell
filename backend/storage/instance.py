@@ -146,7 +146,7 @@ class InstanceConfig(BaseModel):
     modpack_version: Optional[str] = None # modpack version number
     modpack_date: Optional[datetime] = None # release date of current modpack version
     modpack_source: Literal['modrinth', 'curseforge', 'ftb', 'modloader'] = 'modloader' # None if modloader only
-    # - need to set source when creating instance, what do for modloader only instances?
+    # - need to set source when creating instance, what do for modloader only instances? default modrinth and be able to set in settings?
     source_api: Literal['modrinth', 'curseforge'] = 'modrinth'
     jvm_args: List[str] = []
     java_version: Optional[str] = None

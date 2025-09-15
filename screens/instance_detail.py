@@ -23,18 +23,18 @@ class InstanceDetailScreen(FocusNavigationMixin, Screen):
         ('r', 'restart', 'Restart'),
     ] + FocusNavigationMixin.BINDINGS
 
-    navigation_map = {
-        "start_stop":   {"left":"settings",     "up": "configs",    "down": "configs",      "right": "restart"},
-        "restart":      {"left":"start_stop",   "up": "backups",    "down": "backups",      "right": "console"},
-        "console":      {"left":"restart",      "up": "folder",     "down": "folder",       "right": "modlist"},
-        "modlist":      {"left":"console",      "up": "delete",     "down": "delete",       "right": "settings"},
-        "settings":     {"left":"modlist",      "up": "back",       "down": "back",         "right": "start_stop"},
-        "configs":      {"left":"back",         "up": "start_stop", "down": "start_stop",   "right": "backups"},
-        "backups":      {"left":"configs",      "up": "restart",    "down": "restart",      "right": "folder"},
-        "folder":       {"left":"backups",      "up": "console",    "down": "console",      "right": "delete"},
-        "delete":       {"left":"folder",       "up": "modlist",    "down": "modlist",      "right": "back"},
-        "back":         {"left":"delete",       "up": "settings",   "down": "settings",     "right": "configs"},
-    }
+    # navigation_map = {
+    #     "start_stop":   {"left":"settings",     "up": "configs",    "down": "configs",      "right": "restart"},
+    #     "restart":      {"left":"start_stop",   "up": "backups",    "down": "backups",      "right": "console"},
+    #     "console":      {"left":"restart",      "up": "folder",     "down": "folder",       "right": "modlist"},
+    #     "modlist":      {"left":"console",      "up": "delete",     "down": "delete",       "right": "settings"},
+    #     "settings":     {"left":"modlist",      "up": "back",       "down": "back",         "right": "start_stop"},
+    #     "configs":      {"left":"back",         "up": "start_stop", "down": "start_stop",   "right": "backups"},
+    #     "backups":      {"left":"configs",      "up": "restart",    "down": "restart",      "right": "folder"},
+    #     "folder":       {"left":"backups",      "up": "console",    "down": "console",      "right": "delete"},
+    #     "delete":       {"left":"folder",       "up": "modlist",    "down": "modlist",      "right": "back"},
+    #     "back":         {"left":"delete",       "up": "settings",   "down": "settings",     "right": "configs"},
+    # }
 
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
@@ -72,16 +72,16 @@ class InstanceDetailScreen(FocusNavigationMixin, Screen):
         yield Static(id='grid-spacer')
 
         with Grid(id='button-grid'):
-            yield Button('Start/Stop', id='start_stop', classes='detail button')
-            yield Button('Restart', id='restart', classes='detail button')
-            yield Button('Console', id='console', classes='detail button')
-            yield Button('Mod List', id='modlist', classes='detail button')
-            yield Button('Settings', id='settings', classes='detail button')
-            yield Button('Configs', id='configs', classes='detail button')
-            yield Button('Backups', id='backups', classes='detail button')
-            yield Button('Open Folder', id='folder', classes='detail button')
-            yield Button('Delete Instance', id='delete', classes='detail button')
-            yield Button('Back', id='back', classes='detail button')
+            yield Button('Start/Stop', id='start_stop', classes='focusable detail button')
+            yield Button('Restart', id='restart', classes='focusable detail button')
+            yield Button('Console', id='console', classes='focusable detail button')
+            yield Button('Mod List', id='modlist', classes='focusable detail button')
+            yield Button('Settings', id='settings', classes='focusable detail button')
+            yield Button('Configs', id='configs', classes='focusable detail button')
+            yield Button('Backups', id='backups', classes='focusable detail button')
+            yield Button('Open Folder', id='folder', classes='focusable detail button')
+            yield Button('Delete Instance', id='delete', classes='focusable detail button')
+            yield Button('Back', id='back', classes='focusable detail button')
 
         yield Footer()
 

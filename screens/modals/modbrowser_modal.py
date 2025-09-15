@@ -12,7 +12,7 @@ from screens.modals import FilterModal
 from backend.api import get_minecraft_versions, ModrinthAPI, CurseforgeAPI
 from backend.api.api import SourceAPI
 
-from helpers import SmartInput, CustomSelect, CustomTable, CustomModal, ModloaderType, FocusNavigationMixin
+from helpers import SmartInput, CustomSelect, CustomTable, CustomModal, ModloaderType, FocusNavigationMixin, CustomVerticalScroll
 
 class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
     CSS_PATH = 'styles/modbrowser_modal.tcss'
@@ -23,16 +23,16 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             Binding('r', 'reset', 'Reset', show=True),
         ] + FocusNavigationMixin.BINDINGS
 
-    navigation_map = {
-        "modbrowser-search":           {"left": "", "up": "", "down": "modbrowser-modloader-select", "right": "modbrowser-filter-button"},
-        "modbrowser-filter-button":    {"left": "modbrowser-search", "up": "", "down": "modbrowser-mcversion-select", "right": "modbrowser-source-select"},
-        "modbrowser-source-select":    {"left": "modbrowser-filter-button", "up": "", "down": "modbrowser-mcversion-select", "right": ""},
-        "modbrowser-modloader-select": {"left": "", "up": "modbrowser-search", "down": "modbrowser-table", "right": "modbrowser-mcversion-select"},
-        "modbrowser-mcversion-select": {"left": "modbrowser-modloader-select", "up": "modbrowser-filter-button", "down": "modbrowser-version-select", "right": ""},
-        "modbrowser-table":            {"left": "", "up": "modbrowser-modloader-select", "down": "", "right": "modbrowser-version-select"},
-        "modbrowser-version-select":   {"left": "modbrowser-table", "up": "modbrowser-mcversion-select", "down": "modbrowser-install-button", "right": ""},
-        "modbrowser-install-button":   {"left": "modbrowser-table", "up": "modbrowser-version-select", "down": "", "right": ""},
-    }
+    # navigation_map = {
+    #     "modbrowser-search":           {"left": "", "up": "", "down": "modbrowser-modloader-select", "right": "modbrowser-filter-button"},
+    #     "modbrowser-filter-button":    {"left": "modbrowser-search", "up": "", "down": "modbrowser-mcversion-select", "right": "modbrowser-source-select"},
+    #     "modbrowser-source-select":    {"left": "modbrowser-filter-button", "up": "", "down": "modbrowser-mcversion-select", "right": ""},
+    #     "modbrowser-modloader-select": {"left": "", "up": "modbrowser-search", "down": "modbrowser-table", "right": "modbrowser-mcversion-select"},
+    #     "modbrowser-mcversion-select": {"left": "modbrowser-modloader-select", "up": "modbrowser-filter-button", "down": "modbrowser-version-select", "right": ""},
+    #     "modbrowser-table":            {"left": "", "up": "modbrowser-modloader-select", "down": "", "right": "modbrowser-version-select"},
+    #     "modbrowser-version-select":   {"left": "modbrowser-table", "up": "modbrowser-mcversion-select", "down": "modbrowser-install-button", "right": ""},
+    #     "modbrowser-install-button":   {"left": "modbrowser-table", "up": "modbrowser-version-select", "down": "", "right": ""},
+    # }
 
     sources = {
         "modrinth": {
@@ -81,25 +81,25 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             # top toolbar grid
             with Grid(id='modbrowser-top-grid', classes='modbrowser grid top'):
                 yield Static('Search:', classes='modbrowser text')
-                self.input = SmartInput(placeholder='Search Mods...', id='modbrowser-search', classes='modbrowser input shrink')
+                self.input = SmartInput(placeholder='Search Mods...', id='modbrowser-search', classes='focusable modbrowser input shrink')
                 yield self.input
-                yield Button('Filter', id='modbrowser-filter-button', classes='modbrowser button shrink')
+                yield Button('Filter', id='modbrowser-filter-button', classes='focusable modbrowser button shrink')
                 yield Static('Source:', classes='modbrowser text')
-                self.source_select = CustomSelect([(key.capitalize(), key) for key in self.sources], allow_blank=False, id='modbrowser-source-select', classes='modbrowser select shrink')
+                self.source_select = CustomSelect([(key.capitalize(), key) for key in self.sources], allow_blank=False, id='modbrowser-source-select', classes='focusable modbrowser select shrink')
                 yield self.source_select
 
                 yield Static('Modloader:', classes='modbrowser text')
-                self.modloader_select = CustomSelect([(loader.capitalize(), loader) for loader in get_args(ModloaderType)], allow_blank=False, id='modbrowser-modloader-select', classes='modbrowser select shrink')
+                self.modloader_select = CustomSelect([(loader.capitalize(), loader) for loader in get_args(ModloaderType)], allow_blank=False, id='modbrowser-modloader-select', classes='focusable modbrowser select shrink')
                 yield self.modloader_select
                 yield Static('MC Version:', id='modbrowser-mcversion-label', classes='modbrowser text')
-                self.mcversion_select = CustomSelect([('...', '...')], allow_blank=False, disabled=True, id='modbrowser-mcversion-select', classes='modbrowser select shrink')
+                self.mcversion_select = CustomSelect([('...', '...')], allow_blank=False, disabled=True, id='modbrowser-mcversion-select', classes='focusable modbrowser select shrink')
                 yield self.mcversion_select
 
             # mod list
             self.list_group = VerticalGroup(classes='modbrowser group')
             self.list_group.border_title = 'Mods List'
             with self.list_group:
-                self.mod_table = CustomTable(zebra_stripes=True, cursor_type='row', id='modbrowser-table', classes='modbrowser table')
+                self.mod_table = CustomTable(zebra_stripes=True, cursor_type='row', id='modbrowser-table', classes='focusable modbrowser table')
                 yield self.mod_table
 
             # mod details grid
@@ -111,7 +111,7 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                 yield self.selected_mod_label
 
                 yield Static('Version:', classes='modbrowser text')
-                self.version_select = CustomSelect([('Loading...', 'Loading...')], allow_blank=False, disabled=True, id='modbrowser-version-select', classes='modbrowser select shrink')
+                self.version_select = CustomSelect([('Loading...', 'Loading...')], allow_blank=False, disabled=True, id='modbrowser-version-select', classes='focusable modbrowser select shrink')
                 yield self.version_select
 
                 yield Static('Description:', id='modbrowser-description-label', classes='modbrowser text')
@@ -120,10 +120,12 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
 
                 # dependencies grid
                 yield Static('Dependencies:', classes='modbrowser text wide')
-                self.dependencies_grid = Grid(id='modbrowser-dependencies-grid', classes='modbrowser grid dependencies')
-                yield VerticalScroll(self.dependencies_grid, id='modbrowser-dependencies-scroll', classes='modbrowser dependencies-scroll')
+                # self.dependencies_grid = Grid(id='modbrowser-dependencies-grid', classes='modbrowser grid dependencies')
+                # yield VerticalScroll(self.dependencies_grid, id='modbrowser-dependencies-scroll', classes='modbrowser dependencies-scroll')
+                self.dependencies_grid = CustomVerticalScroll(id='modbrowser-dependencies-scroll', classes='modbrowser dependencies-scroll')
+                yield self.dependencies_grid
 
-                self.install_button = Button('Install', id='modbrowser-install-button', classes='modbrowser button shrink')
+                self.install_button = Button('Install', id='modbrowser-install-button', classes='focusable modbrowser button shrink')
                 yield self.install_button
 
             self.filter_label = Label(id='modbrowser-filter-label', classes='modbrowser text label hidden')
@@ -329,10 +331,6 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             project_id = dep.get('project_id', '')
             project_info = self.dependencies_info.get(project_id)
 
-            # - put text from label widget into checkbox
-            is_required = dep.get('dependency_type') == 'required'
-            checkbox = Checkbox('', value=is_required, compact=True, id=f"dep-check-{project_id}", classes='modbrowser checkbox')
-
             # - dependency selection only on pressing "install" -> modal; in details just include dependencies as text
             # - save dependencies to more easily install them afterwards
             
@@ -346,22 +344,25 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             #     prev_checkbox_id = self.dependencies_grid.children[-2].id
             #     self.navigation_map[str(prev_checkbox_id)]["down"] = str(checkbox.id)
 
+            is_required = dep.get('dependency_type') == 'required'
+            checkbox_value = is_required
+            checkbox_disabled = False
             if not project_info:
                 # The project ID from the dependency list was not found by the API.
                 dep_name = f"{project_id or 'Unknown'} [yellow](Not Found)[/yellow]"
-                checkbox.value = False
-                checkbox.disabled = True
+                checkbox_value = False
+                checkbox_disabled = True
             else:
                 dep_name = project_info.get('title', project_id)
                 # If a dependency is client-side only, disable its checkbox and indicate it.
                 if project_info.get('server_side') == 'unsupported':
-                    checkbox.value = False
-                    checkbox.disabled = True
+                    checkbox_value = False
+                    checkbox_disabled = True
                     dep_name += ' [red](Client-side)[/red]'
 
             dep_type = dep.get('dependency_type', 'unknown')
             if project_id:
-                self.selected_dependencies[project_id] = checkbox.value
+                self.selected_dependencies[project_id] = checkbox_value
 
             dep_type_styled = f"({dep_type})"
             match dep_type:
@@ -371,14 +372,16 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                     dep_type_styled = f"([yellow]{dep_type}[/yellow])"
                 case 'incompatible':
                     dep_type_styled = f"([red]{dep_type}[/red])"
-                    checkbox.value = False
-                    checkbox.disabled = True
+                    checkbox_value = False
+                    checkbox_disabled = True
                 case default:
                     dep_type_styled = f"({dep_type})"
-            # - why use a label when checkbox has a text display built in?
-            label = Label(f"{dep_name} {dep_type_styled}")
 
-            self.dependencies_grid.mount(checkbox, label)
+            checkbox = Checkbox(f'{dep_name} {dep_type_styled}', value=checkbox_value, disabled=checkbox_disabled, compact=True, id=f"dep-check-{project_id}", classes='focusable modbrowser checkbox')
+            # - why use a label when checkbox has a text display built in?
+            # label = Label(f"{dep_name} {dep_type_styled}")
+
+            self.dependencies_grid.mount(checkbox)
 
     def action_filter(self):
         """Open the filter modal."""

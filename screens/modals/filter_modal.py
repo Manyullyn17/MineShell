@@ -67,13 +67,14 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
                         *((v, v) for v in sorted(unique_values[column], key=sort_key, reverse=reverse)),
                         compact=True,
                         id=f'filter-{column}',
-                        classes='filter selectionlist'
+                        classes='focusable filter selectionlist'
                         ),
                     title='All',
                     id=f'{column}-collapsible',
-                    classes='filter collapsible'
+                    classes='focusable filter collapsible'
                     )
                 )
+            # self.query_one(f'#{column}-collapsible', Collapsible).query("CollapsibleTitle").add_class('focusable')
             self.select_ids.append(f'filter-{column}')
             self.collapsible_ids.append(f'{column}-collapsible')
 
@@ -98,8 +99,8 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
         self.navigation_map['filter-back-button'] = {'left': '', 'up': self.collapsible_ids[-1], 'down': '', 'right': 'filter-done-button'}
 
         self.grid.mount(Static(id='filter-spacer', classes='filter spacer'))
-        self.grid.mount(Button('Back', id='filter-back-button', classes='filter button'))
-        self.grid.mount(Button('Done', id='filter-done-button', classes='filter button'))
+        self.grid.mount(Button('Back', id='filter-back-button', classes='focusable filter button'))
+        self.grid.mount(Button('Done', id='filter-done-button', classes='focusable filter button'))
 
     @on(Resize)
     def on_resize(self, event: Resize):
@@ -154,34 +155,36 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
                 if id != collapsible.id:
                     self.query_one(f'#{id}', Collapsible).collapsed = True
 
-    def action_focus_move(self, direction: str):
-        # - if in collapsible, up should focus collapsible, down should focus widget below collapsible
-        focused = self.focused
-        if not focused:
-            return
-        collapsible = next((a for a in focused.ancestors if isinstance(a, Collapsible)), None)
-        if collapsible:
-            selectlist = collapsible.query_one(SelectionList)
-            if not selectlist:
-                return
-            if not collapsible.collapsed and direction == 'down': # if pressing down on expanded collapsible -> focus selectlist inside
-                selectlist.focus()
-                return
-            else: # else set focused to selectlist and let navigation_map take over
-                focused = selectlist
+    # def action_focus_move(self, direction: str):
+    #     FocusNavigationMixin.action_focus_move(self, direction)
+
+    #     # - if in collapsible, up should focus collapsible, down should focus widget below collapsible
+    #     focused = self.focused
+    #     if not focused:
+    #         return
+    #     collapsible = next((a for a in focused.ancestors if isinstance(a, Collapsible)), None)
+    #     if collapsible:
+    #         selectlist = collapsible.query_one(SelectionList)
+    #         if not selectlist:
+    #             return
+    #         if not collapsible.collapsed and direction == 'down': # if pressing down on expanded collapsible -> focus selectlist inside
+    #             selectlist.focus()
+    #             return
+    #         else: # else set focused to selectlist and let navigation_map take over
+    #             focused = selectlist
                 
-        if not focused.id:
-            return
-        try:
-            next_id = self.navigation_map.get(focused.id, {}).get(direction)
-            if next_id:
-                next_widget = self.query_one(f'#{next_id}')
-                if isinstance(next_widget, Collapsible):
-                    next_widget.query("CollapsibleTitle").focus()
-                else:
-                    next_widget.focus()
-        except Exception as e:
-            self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
+    #     if not focused.id:
+    #         return
+    #     try:
+    #         next_id = self.navigation_map.get(focused.id, {}).get(direction)
+    #         if next_id:
+    #             next_widget = self.query_one(f'#{next_id}')
+    #             if isinstance(next_widget, Collapsible):
+    #                 next_widget.query("CollapsibleTitle").focus()
+    #             else:
+    #                 next_widget.focus()
+    #     except Exception as e:
+    #         self.notify(f"Failed to move focus. {e}", severity='error', timeout=5)
 
     def action_esc(self):
         focused = self.focused
