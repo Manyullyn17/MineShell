@@ -4,7 +4,6 @@ from typing import Callable, Awaitable, Any, overload
 from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.events import Resize
 from textual.widgets import DataTable
 
 from screens.modals import FilterModal
@@ -142,6 +141,7 @@ class SelectorModal(CustomModal[str | tuple[str, list[dict[str, str | list[str]]
         self._populate_table(self.choices)
         self.table.loading = False
 
+    @on(DataTable.RowSelected)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         selected_row = event.row_key.value
         if self.mode == 'choices':
@@ -207,6 +207,7 @@ class SelectorModal(CustomModal[str | tuple[str, list[dict[str, str | list[str]]
 
     @work
     async def load_table(self, data: list[dict[str, str | list[str]]]):
+        """Loads data into table async."""
         self.table.loading = True
         self._populate_table(data)
         self.table.loading = False

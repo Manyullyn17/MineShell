@@ -12,13 +12,6 @@ class SortModal(FocusNavigationMixin, CustomModal[tuple[str, bool]]):
             Binding('q', 'back', show=False),
             Binding('escape', 'esc', show=False),
         ] + FocusNavigationMixin.BINDINGS
-    
-    # navigation_map = {
-    #     "sort-select":      {"left": "", "up": "", "down": "sort-reverse",     "right": ""},
-    #     "sort-reverse":     {"left": "", "up": "", "down": "sort-done-button", "right": ""},
-    #     "sort-back-button": {"left": "", "up": "", "down": "",                 "right": "sort-done-button"},
-    #     "sort-done-button": {"left": "sort-back-button", "up": "", "down": "", "right": ""},
-    # }
 
     def __init__(self, sortable_columns:list[str]):
         super().__init__()

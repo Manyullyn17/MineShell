@@ -13,9 +13,9 @@ class TextDisplayModal(CustomModal[str | None]):
     Args:
         title: Title shown at the top.
         text: Text/markdown to display.
-        width: Modal content width (cols/ch units).
-        height: Modal content height (rows/ch units).
-        markdown: If True, render using Rich Markdown.
+        fixed_width (default: 0 -> auto): Modal content width (cols/ch units).
+        fixed_height (default: 0 -> auto): Modal content height (rows/ch units).
+        markdown (default: True): If True, render using Rich Markdown.
     """
     CSS_PATH = 'styles/text_display_modal.tcss'
     BINDINGS = [
@@ -63,9 +63,9 @@ class TextDisplayModal(CustomModal[str | None]):
     @on(Resize)
     def on_resize(self, event: Resize):
         if not self.fixed_width:
-            self.grid.styles.width = max(min(int(self.size.width * 0.8), self.longest + 12), 10) # max = screenwidth * 80%, min = 10
+            self.grid.styles.width = max(min(int(self.size.width * 0.8), self.longest + 12), 10) # size = len(longest_line) + 12, max = screenwidth * 80%, min = 10
         if not self.fixed_height:
-            self.grid.styles.height = max(min(int(self.size.height * 0.8), self.lines + 10), 10) # max = screenwidth * 80%, min = 10
+            self.grid.styles.height = max(min(int(self.size.height * 0.8), self.lines + 10), 10) # size = count(lines) + 10, max = screenwidth * 80%, min = 10
 
     def action_back(self):
         self.dismiss(None)

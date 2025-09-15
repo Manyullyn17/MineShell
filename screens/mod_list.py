@@ -1,7 +1,7 @@
 from typing import Literal, cast
 from datetime import datetime
 
-from textual import work
+from textual import work, on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, Horizontal
@@ -25,16 +25,6 @@ class ModListScreen(FocusNavigationMixin, Screen):
         Binding('f', "filter", "Filter", show=True),
         Binding('s', "sort", "Sort", show=True),
     ] + FocusNavigationMixin.BINDINGS
-
-    # navigation_map = {
-    #     "modlist-search":           {"left": "",                         "up": "",  "down": "modlist-table", "right": "modlist-filter-button"},
-    #     "modlist-filter-button":    {"left": "modlist-search",           "up": "",  "down": "modlist-table", "right": "modlist-sort-button"},
-    #     "modlist-sort-button":      {"left": "modlist-filter-button",    "up": "",  "down": "modlist-table", "right": "modlist-update-button"},
-    #     "modlist-update-button":    {"left": "modlist-sort-button",      "up": "",  "down": "modlist-table", "right": "modlist-add-mod-button"},
-    #     "modlist-add-mod-button":   {"left": "modlist-update-button",    "up": "",  "down": "modlist-table", "right": "modlist-back-button"},
-    #     "modlist-back-button":      {"left": "modlist-add-mod-button",   "up": "",  "down": "modlist-table", "right": ""},
-    #     "modlist-table":            {"left": "",                         "up": "modlist-search", "down": "", "right": "modlist-filter-button"},
-    # }
 
     first_load = True
 
@@ -130,6 +120,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
         self.sort_table(self.current_sorting)
         self.table.loading = False
 
+    @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case 'modlist-filter-button':
@@ -144,10 +135,12 @@ class ModListScreen(FocusNavigationMixin, Screen):
             case 'modlist-back-button':
                 self.app.pop_screen()
 
+    @on(DataTable.RowHighlighted)
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_mod = str(event.row_key.value)
 
     # - implement opening mod details on select (modal with options to update, enable/disable, delete)
+    @on(DataTable.RowSelected)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if str(event.row_key.value) == '':
             return
@@ -198,7 +191,9 @@ class ModListScreen(FocusNavigationMixin, Screen):
             self.load_table()
     
     def filter_table(self):
+        """Open Filter Modal."""
         def filter_chosen(filter: dict | None) -> None:
+            """Filter Table using supplied filter."""
             if filter:
                 formatted_filters = ' | '.join(
                     f"{col.title()}: {', '.join(val) if isinstance(val, list) else val.strip('[]').replace('\'','')}" 
@@ -251,6 +246,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
         column, reverse = sort_map[sort_method]
         self.table.sort(*column, reverse=reverse, key=sort_key)
 
+    @on(Input.Changed)
     def on_input_changed(self, event: Input.Changed):
         if event.input.id == 'modlist-search':
             query = event.value
@@ -258,6 +254,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
             self.search_table(query)
 
     def search_table(self, query: str) -> None:
+        """Filter table using supplied query."""
         if not query:
             self.load_table()
             return

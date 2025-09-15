@@ -26,28 +26,6 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
         ('i', 'install', 'Install'),
     ] + FocusNavigationMixin.BINDINGS
 
-    # navigation_map_modpack = {
-    #     "source_select":        {"left":"",                     "up": "",                   "down": "project_input",        "right": "search_button"},
-    #     "project_input":        {"left":"",                     "up": "source_select",      "down": "version_select",       "right": "search_button"},
-    #     "search_button":        {"left":"project_input",        "up": "source_select",      "down": "modlist_button",       "right": "install"},
-    #     "version_select":       {"left":"",                     "up": "project_input",      "down": "instance_name_input",  "right": "modlist_button"},
-    #     "modlist_button":       {"left":"version_select",       "up": "search_button",      "down": "changelog_button",     "right": "install"},
-    #     "instance_name_input":  {"left":"",                     "up": "version_select",     "down": "install",              "right": "changelog_button"},
-    #     "changelog_button":     {"left":"instance_name_input",  "up": "modlist_button",     "down": "install",              "right": "install"},
-    #     "install":              {"left":"changelog_button",     "up": "changelog_button",   "down": "",                     "right": "back"},
-    #     "back":                 {"left":"install",              "up": "changelog_button",   "down": "",                     "right": ""},
-    # }
-
-    # navigation_map_modloader = {
-    #     "source_select":                {"left":"",                             "up": "install",                    "down": "instance_name_input",          "right": "install"},
-    #     "instance_name_input":          {"left":"",                             "up": "source_select",              "down": "mc_version_selector",          "right": "install"},
-    #     "mc_version_selector":          {"left":"",                             "up": "instance_name_input",        "down": "modloader_selector",           "right": "install"},
-    #     "modloader_selector":           {"left":"",                             "up": "mc_version_selector",        "down": "modloader_version_selector",   "right": "install"},
-    #     "modloader_version_selector":   {"left":"",                             "up": "modloader_selector",         "down": "install",                      "right": "install"},
-    #     "install":                      {"left":"modloader_version_selector",   "up": "modloader_version_selector", "down": "",                             "right": "back"},
-    #     "back":                         {"left":"install",                      "up": "modloader_version_selector", "down": "",                             "right": ""},
-    # }
-
     sources = {
         "Modrinth": {
             "key": "modrinth",
@@ -208,6 +186,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
                 return
 
     async def open_modpack_selector(self, query: str):
+        """Opens modpack search modal."""
         async def modpack_selected(result: str | tuple[str, list[dict[str, str | list[str]]]] | None) -> None:
             if result and isinstance(result, tuple):
                 selected, data = result
@@ -278,6 +257,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
                 self.selected_modloader = cast(ModloaderType, str(event.value).lower())
 
     def set_install_mode(self, mode: str):
+        """Switches between install modes."""
         if mode == 'modpack':
             self.install_mode = 'modpack'
             # self.navigation_map = self.navigation_map_modpack
@@ -292,6 +272,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.query('.modloader').remove_class('hidden')
 
     def install(self):
+        """Instance installation prep and starts installation process."""
         def install_finished(result: str | None) -> None:
                 self.query_one('#install').loading = False
                 if result == 'finished':
@@ -371,10 +352,12 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.query_one('#install').loading = False
 
     def search_modpack(self):
+        """Runs modpack selection from sync context."""
         self.query_one('#search_button').loading = True
         self.run_worker(self.open_modpack_selector(self.search.value), exclusive=True, name='modpack_search')
 
     async def select_version(self):
+        """Opens modal to select modpack version."""
         if not self.versions:
             self.notify('Please select a Modpack first.', severity='information', timeout=5)
             return
@@ -417,6 +400,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.notify('Could not load Versions.', severity='error', timeout=5)
 
     def open_changelog(self):
+        """Displays changelog in modal."""
         if not self.selected_modpack_version:
             self.notify('Please select a Modpack first.', severity='information', timeout=5)
             return
@@ -427,6 +411,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.notify('Could not load Changelog.', severity='error', timeout=5)
 
     async def select_mc_version(self):
+        """Opens modal to select minecraft version."""
         self.mc_version_selector.loading = True
         
         def mc_version_chosen(result: str | tuple | None) -> None:
@@ -453,6 +438,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.mc_version_selector.loading = False
 
     async def select_modloader_version(self):
+        """Opens modal to select modloader version."""
         if not self.selected_minecraft_version:
             self.notify("Please select Minecraft Version first.", severity='information', timeout=5)
             return
@@ -487,6 +473,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             self.modloader_version_selector.loading = False
 
     async def get_modloader_versions(self, mc_version) -> list[dict[str, list[str] | str]]:
+        """Gets modloader versions for selected modloader and minecraft version."""
         match self.selected_modloader:
             case 'fabric':
                 versions = await get_fabric_versions(mc_version)
@@ -502,6 +489,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
                 return [{"version": v["version"], "release": str(v["release"])} for v in versions]
 
     async def show_modlist(self):
+        """Displays modlist in modal."""
         if not self.selected_modpack_version:
             self.notify('Please select a Modpack first.', severity='information', timeout=5)
             return

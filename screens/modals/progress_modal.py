@@ -84,6 +84,7 @@ class ProgressModal(CustomModal):
 
     @work(thread=True)
     async def start_install(self):
+        """Starts or restarts installation process."""
         try:
             self.allow_click_outside = False
             self.failed = False
@@ -127,6 +128,7 @@ class ProgressModal(CustomModal):
         self.query_one('#progress-cancel-container').display = 'none'
 
     def update_instances(self):
+        """Saves data of installed instance to registry."""
         registry = InstanceRegistry.load()
         try:
             registry.add_instance(
@@ -159,7 +161,9 @@ class ProgressModal(CustomModal):
             self.app.push_screen(DeleteModal(f"Overwrite Entry for Instance ID '{self.instance.instance_id}'?"), overwrite_instance)
         return
 
+    # - needs to be refactored alongside install process
     def progress_bar_callback(self, total: int, progress: int, bar_id: int=1, step: int=0):
+        """Callback to update progress bar from install process."""
         bar_map = [self.progress_bar, self.sub_progress_bar]
         step_list = [0, 22, 11, 11, 11, 6, 33, 6]
         bar_map[bar_id].update(total=total, progress=progress)
@@ -167,7 +171,9 @@ class ProgressModal(CustomModal):
             sub_progress_percent = int(self.sub_progress_bar.progress) // int(self.sub_progress_bar.total)
             self.progress_bar.update(progress=sum(step_list[:step]) + step_list[step] * sub_progress_percent)
 
+    # - might also need a refactor
     def step_callback(self, step: str, label_id: int=1):
+        """Callback to update step label from install process."""
         label_map = [self.progress_step, self.progress_substep]
         label = label_map[label_id]
         label.update(step)

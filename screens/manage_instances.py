@@ -25,12 +25,6 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         ('delete', 'delete', 'Delete'),
     ] + FocusNavigationMixin.BINDINGS
 
-    # navigation_map = {
-    #         "instances_list":   {"left":"",                 "up": "",               "down": "new_instance", "right": "new_instance"},
-    #         "new_instance":     {"left":"instances_list",   "up": "instances_list", "down": "",             "right": "back"},
-    #         "back":             {"left":"new_instance",     "up": "instances_list", "down": "",             "right": ""},
-    # }
-
     selected_instance: str | None = None # instance_id
 
     registry: InstanceRegistry
@@ -111,6 +105,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         self.table.loading = False
         self.table.focus()
 
+    @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case 'back':
@@ -126,10 +121,12 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
                     self.open_instance(instance_id)
                 self.app.push_screen(NewInstanceScreen(), instance_created)
 
+    @on(DataTable.RowHighlighted)
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
         self.refresh_bindings()
 
+    @on(DataTable.RowSelected)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         match self.mouse_button:
             case 1: # left click

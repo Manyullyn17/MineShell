@@ -15,14 +15,6 @@ class MainMenu(FocusNavigationMixin, Screen):
         ('crtl+q', 'quit', 'Quit'),
     ] + FocusNavigationMixin.BINDINGS
 
-    # navigation_map = {
-    #     "start_stop":       {"left":"", "up": "settings",           "down": "restart",          "right": ""},
-    #     "restart":          {"left":"", "up": "start_stop",         "down": "open_instance",    "right": ""},
-    #     "open_instance":    {"left":"", "up": "restart",            "down": "manage_instances", "right": ""},
-    #     "manage_instances": {"left":"", "up": "open_instance",      "down": "settings",         "right": ""},
-    #     "settings":         {"left":"", "up": "manage_instances",   "down": "start_stop",       "right": ""},
-    # }
-
     def compose(self) -> ComposeResult:
         self.instance_name = ''
         self.instance_status = ''

@@ -11,12 +11,7 @@ class FolderModal(FocusNavigationMixin, CustomModal):
             Binding('q', 'back', show=False),
             Binding('escape', 'back', show=False),
         ] + FocusNavigationMixin.BINDINGS
-    
-    # navigation_map = {
-    #     "ftp-link": {"left":"", "up": "", "down": "back", "right": ""},
-    #     "back":     {"left":"", "up": "ftp-link", "down": "", "right": ""},
-    # }
-    
+
     def __init__(self, instance_name: str, folder_path: str, ftp_link: str):
         super().__init__()
         self.instance_name = instance_name

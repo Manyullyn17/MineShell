@@ -32,17 +32,6 @@ class DeleteModal(FocusNavigationMixin,CustomModal[bool]):
         else:
             self.dismiss(False)
 
-    # def on_key(self, event: events.Key):
-    #     if not self.focused:
-    #         return
-        
-    #     if event.key == 'right':
-    #         self.focus_next()
-    #         event.stop()
-    #     elif event.key == 'left':
-    #         self.focus_previous()
-    #         event.stop()
-
     def action_back(self):
         self.app.pop_screen()
 

@@ -23,17 +23,6 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
             Binding('r', 'reset', 'Reset', show=True),
         ] + FocusNavigationMixin.BINDINGS
 
-    # navigation_map = {
-    #     "modbrowser-search":           {"left": "", "up": "", "down": "modbrowser-modloader-select", "right": "modbrowser-filter-button"},
-    #     "modbrowser-filter-button":    {"left": "modbrowser-search", "up": "", "down": "modbrowser-mcversion-select", "right": "modbrowser-source-select"},
-    #     "modbrowser-source-select":    {"left": "modbrowser-filter-button", "up": "", "down": "modbrowser-mcversion-select", "right": ""},
-    #     "modbrowser-modloader-select": {"left": "", "up": "modbrowser-search", "down": "modbrowser-table", "right": "modbrowser-mcversion-select"},
-    #     "modbrowser-mcversion-select": {"left": "modbrowser-modloader-select", "up": "modbrowser-filter-button", "down": "modbrowser-version-select", "right": ""},
-    #     "modbrowser-table":            {"left": "", "up": "modbrowser-modloader-select", "down": "", "right": "modbrowser-version-select"},
-    #     "modbrowser-version-select":   {"left": "modbrowser-table", "up": "modbrowser-mcversion-select", "down": "modbrowser-install-button", "right": ""},
-    #     "modbrowser-install-button":   {"left": "modbrowser-table", "up": "modbrowser-version-select", "down": "", "right": ""},
-    # }
-
     sources = {
         "modrinth": {
             "api": ModrinthAPI(),
@@ -120,8 +109,6 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
 
                 # dependencies grid
                 yield Static('Dependencies:', classes='modbrowser text wide')
-                # self.dependencies_grid = Grid(id='modbrowser-dependencies-grid', classes='modbrowser grid dependencies')
-                # yield VerticalScroll(self.dependencies_grid, id='modbrowser-dependencies-scroll', classes='modbrowser dependencies-scroll')
                 self.dependencies_grid = CustomVerticalScroll(id='modbrowser-dependencies-scroll', classes='modbrowser dependencies-scroll')
                 yield self.dependencies_grid
 

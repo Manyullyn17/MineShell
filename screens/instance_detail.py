@@ -23,19 +23,6 @@ class InstanceDetailScreen(FocusNavigationMixin, Screen):
         ('r', 'restart', 'Restart'),
     ] + FocusNavigationMixin.BINDINGS
 
-    # navigation_map = {
-    #     "start_stop":   {"left":"settings",     "up": "configs",    "down": "configs",      "right": "restart"},
-    #     "restart":      {"left":"start_stop",   "up": "backups",    "down": "backups",      "right": "console"},
-    #     "console":      {"left":"restart",      "up": "folder",     "down": "folder",       "right": "modlist"},
-    #     "modlist":      {"left":"console",      "up": "delete",     "down": "delete",       "right": "settings"},
-    #     "settings":     {"left":"modlist",      "up": "back",       "down": "back",         "right": "start_stop"},
-    #     "configs":      {"left":"back",         "up": "start_stop", "down": "start_stop",   "right": "backups"},
-    #     "backups":      {"left":"configs",      "up": "restart",    "down": "restart",      "right": "folder"},
-    #     "folder":       {"left":"backups",      "up": "console",    "down": "console",      "right": "delete"},
-    #     "delete":       {"left":"folder",       "up": "modlist",    "down": "modlist",      "right": "back"},
-    #     "back":         {"left":"delete",       "up": "settings",   "down": "settings",     "right": "configs"},
-    # }
-
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
         self.instance = instance
@@ -140,6 +127,7 @@ class InstanceDetailScreen(FocusNavigationMixin, Screen):
         print('restart')
 
     async def update_status(self):
+        """Update instance status."""
         # - actually get status dynamically
         self.running = 'Running'
         self.uptime = '00:02:34'
