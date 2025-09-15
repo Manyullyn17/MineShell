@@ -323,26 +323,36 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
 
         await self.dependencies_grid.remove_children()
 
-        if not self.dependencies_info and self.source == 'modrinth' and project_ids:
+        if not self.dependencies_info and project_ids:
             self.dependencies_grid.mount(Static('Could not fetch dependency info. Some may be client-side only.', classes='modbrowser text wide'))
             return
 
-        for dep in self.dependencies:
+        def sort_deps(dep):
+            """Sort dependencies by type and name."""
+            proj_id = dep.get('project_id', '')
+            proj_info = self.dependencies_info.get(proj_id, {})
+            proj_support = proj_info.get('server_side', '')
+            title = proj_info.get('title', '')
+            ret = title
+
+            if proj_support == 'required':
+                priority = 0
+            elif proj_support == 'unsupported':
+                priority = 2
+            elif not title:
+                priority = 3
+                ret = proj_id
+            else:
+                priority = 1
+
+            return (priority, ret)
+
+        for dep in sorted(self.dependencies, key=sort_deps):
             project_id = dep.get('project_id', '')
             project_info = self.dependencies_info.get(project_id)
 
             # - dependency selection only on pressing "install" -> modal; in details just include dependencies as text
             # - save dependencies to more easily install them afterwards
-            
-            # - navigation map doesn't work right, for now disabled
-            # self.navigation_map[str(checkbox.id)] = {"left": "modbrowser-table", "right": ""}
-            # self.navigation_map[str(checkbox.id)]["up"] = "modbrowser-version-select" if len(self.dependencies_grid.children) == 0 else str(self.dependencies_grid.children[-2].id)
-            # self.navigation_map[str(checkbox.id)]["down"] = "modbrowser-install-button"
-            
-            # # Update previous checkbox's down navigation
-            # if len(self.dependencies_grid.children) > 0:
-            #     prev_checkbox_id = self.dependencies_grid.children[-2].id
-            #     self.navigation_map[str(prev_checkbox_id)]["down"] = str(checkbox.id)
 
             is_required = dep.get('dependency_type') == 'required'
             checkbox_value = is_required
@@ -378,8 +388,6 @@ class ModBrowserModal(FocusNavigationMixin, CustomModal[str]):
                     dep_type_styled = f"({dep_type})"
 
             checkbox = Checkbox(f'{dep_name} {dep_type_styled}', value=checkbox_value, disabled=checkbox_disabled, compact=True, id=f"dep-check-{project_id}", classes='focusable modbrowser checkbox')
-            # - why use a label when checkbox has a text display built in?
-            # label = Label(f"{dep_name} {dep_type_styled}")
 
             self.dependencies_grid.mount(checkbox)
 
