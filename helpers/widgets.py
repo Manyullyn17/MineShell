@@ -3,15 +3,15 @@ from typing import TypeVar, Protocol, Any
 from textual import on
 from textual.binding import Binding
 from textual.containers import VerticalScroll
-from textual.css.query import DOMQuery
-from textual.events import MouseDown
+from textual.css.query import DOMQuery, NoMatches
+from textual.events import MouseDown, Key
 from textual.geometry import Region
 from textual.screen import ModalScreen
 from textual.widget import Widget
-from textual.widgets import Select, Input, DataTable, Collapsible
+from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList
 
 class CustomSelect(Select):
-    def on_key(self, event):
+    def on_key(self, event: Key):
         """Override to prevent up/down from opening the menu."""
         if event.key in ("up", "down") and not self.expanded:
             # Let the default navigation work, but don’t trigger menu opening
@@ -27,7 +27,7 @@ class CustomSelect(Select):
         self.value = value
 
 class SmartInput(Input):
-    def on_key(self, event):
+    def on_key(self, event: Key):
         if event.key in ("left", "right"):
             # Determine if we should move focus
             move_focus = (
@@ -56,7 +56,7 @@ class CustomTable(DataTable):
         )
     ]
 
-    def on_key(self, event):
+    def on_key(self, event: Key):
         """Override to make up/down move focus if top or bottom row is selected."""
         if event.key in ("up", "down") and self.cursor_type == 'row':
             # Determine if we should move focus
@@ -139,9 +139,15 @@ class FocusNavigationMixin:
         def get_candidates(self) -> list[Widget]:
             candidates = []
             for w in self.query('.focusable'):
+                # if same widget or not in region, skip
                 if w == current or not w.region.intersection(proj_region):
                     continue
-
+                try:
+                    # ignore collapsible if inside and pressing down to get out
+                    if current in w.query_one('Contents').children and direction == 'down':
+                        continue
+                except NoMatches:
+                    pass
                 if w.focusable:
                     candidates.append(w)
                 elif isinstance(w, Collapsible):
@@ -225,12 +231,15 @@ class FocusNavigationMixin:
         if candidates:
             def distance(w: Widget):
                 fx, fy = focused_region.center
-                # clamp the focus point to the bounds of the target widget
+
+                # Clamp focus point to widget bounds
                 tx = min(max(fx, w.region.x), w.region.right)
                 ty = min(max(fy, w.region.y), w.region.bottom)
-                dx = tx - fx
-                dy = (ty - fy) * 10
-                return (dx**2 + dy**2)**0.5
+
+                dx = abs(tx - fx)
+                dy = abs(ty - fy)
+
+                return (dy, dx)
 
             next_widget = min(candidates, key=distance)
             return next_widget
@@ -260,3 +269,39 @@ class CustomVerticalScroll(VerticalScroll):
             return
         # Fallback to normal VerticalScroll behavior
         return super()._on_key(event)
+
+class CustomSelectionList(SelectionList):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._first_highlighted = False
+        self._last_highlighted = False
+
+    def on_key(self, event: Key):
+        """Override to make up/down move focus if top or bottom row is selected."""
+        if event.key in ("up", "down"):
+            # Determine if we should move focus
+            move_focus = (
+                (event.key == "up" and self._first_highlighted) or
+                (event.key == "down" and self._last_highlighted)
+            )
+
+            if move_focus:
+                # Call the screen's focus movement
+                screen = self.app.screen
+                if hasattr(screen, "action_focus_move"):
+                    getattr(screen, "action_focus_move")(event.key)
+                event.stop()
+                return
+        # Fallback to normal DataTable behavior
+        return super()._on_key(event)
+    
+    def on_selection_list_selection_highlighted(self, event: SelectionList.SelectionHighlighted):
+        idx = event.selection_index
+        if idx == 0:
+            self._first_highlighted = True
+        else:
+            self._first_highlighted = False
+        if idx == len(self.options) - 1:
+            self._last_highlighted = True
+        else:
+            self._last_highlighted = False

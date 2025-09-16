@@ -1,3 +1,4 @@
+from hmac import new
 import os
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +39,6 @@ class ModEntry(BaseModel):
 class ModList(BaseModel):
     # - use Field(default_factory=list)?
     mods: List[ModEntry] = []
-    # - add instance path for use in remove_mod()
 
     @classmethod
     def load(cls, path: Path) -> "ModList":
@@ -80,22 +80,58 @@ class ModList(BaseModel):
         self.mods = [m for m in self.mods if m.mod_id != mod_id] # delete mod from modlist
         return len(self.mods) < before
 
-    def enable_mod(self, mod_id: str) -> bool:
-        """Enable a mod by it's id."""
-        # - actually rename the file
+    def toggle_mod(self, mod_id: str, path: Path) -> bool:
+        """Toggle a mods disabled state by it's id."""
         mod = self.get_mod(mod_id)
         if not mod:
             return False
+        if mod.type == 'mod':
+            path /= 'mods'
+        else:
+            # - datapack disabling not yet supported
+            return False
+        if mod.enabled:
+            return self.disable_mod(mod_id, path)
+        return self.enable_mod(mod_id, path)
+
+    def enable_mod(self, mod_id: str, path: Path) -> bool:
+        """Enable a mod by it's id."""
+        mod = self.get_mod(mod_id)
+        if not mod:
+            return False
+        new_name = mod.filename.replace('.disabled', '')
+        self._rename_mod(mod, path, new_name)
         mod.enabled = True
         return True
 
-    def disable_mod(self, mod_id: str) -> bool:
+    def disable_mod(self, mod_id: str, path: Path) -> bool:
         """Disable a mod by it's id."""
-        # - actually rename the file
         mod = self.get_mod(mod_id)
         if not mod:
             return False
+        new_name = mod.filename + '.disabled'
+        self._rename_mod(mod, path, new_name)
         mod.enabled = False
+        return True
+
+    def _rename_mod(self, mod: ModEntry, path: Path, new_name: str) -> bool:
+        """
+            Rename a mod file.
+
+            Args:
+                mod (ModEntry): The mod to rename.
+                path (Path): The path to the mod folder.
+                new_name (str): The new name for the mod file.
+            Returns:
+                bool: True if rename successful, False otherwise.
+        """
+        mod_path = path / mod.filename
+        new_path = path / new_name
+        try:
+            mod_path.rename(new_path)
+        except:
+            return False
+        mod.filename = new_name
         return True
 
     def to_dict(self, dateformat: str = DATE_FORMAT) -> list[dict[str, str | list[str]]]:

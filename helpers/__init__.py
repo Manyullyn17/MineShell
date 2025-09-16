@@ -11,11 +11,12 @@ __all__ = [
     "download_file",
     "ModloaderType",
     "FocusNavigationMixin",
-    "CustomVerticalScroll"
+    "CustomVerticalScroll",
+    "CustomSelectionList",
 ]
 
 if TYPE_CHECKING:
-    from .widgets import CustomSelect, SmartInput, CustomTable, CustomModal, FocusNavigationMixin, CustomVerticalScroll
+    from .widgets import CustomSelect, SmartInput, CustomTable, CustomModal, FocusNavigationMixin, CustomVerticalScroll, CustomSelectionList
     from .utils import format_date, sanitize_filename, download_file, ModloaderType
 
 # Map attribute names to their modules
@@ -29,7 +30,8 @@ _lazy_map = {
     "download_file": ".utils",
     "ModloaderType": ".utils",
     "FocusNavigationMixin": ".widgets",
-    "CustomVerticalScroll": ".widgets"
+    "CustomVerticalScroll": ".widgets",
+    "CustomSelectionList": ".widgets",
 }
 
 def __getattr__(name: str):

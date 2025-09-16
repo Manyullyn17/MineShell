@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .manage_instances import ManageInstancesScreen
     from .mod_list import ModListScreen
     from .new_instance import NewInstanceScreen
+    from .modbrowser import ModBrowserScreen
 
 # Map attribute names to their modules
 _lazy_map = {
@@ -23,6 +24,7 @@ _lazy_map = {
     "ManageInstancesScreen": ".manage_instances",
     "ModListScreen": ".mod_list",
     "NewInstanceScreen": ".new_instance",
+    "ModBrowserScreen": ".modbrowser"
 }
 
 def __getattr__(name: str):

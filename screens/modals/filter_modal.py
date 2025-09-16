@@ -5,9 +5,9 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid
 from textual.events import Resize
-from textual.widgets import Label, Button, Collapsible, SelectionList, Static
+from textual.widgets import Label, Button, Collapsible, Static
 
-from helpers import CustomModal, FocusNavigationMixin
+from helpers import CustomModal, FocusNavigationMixin, CustomSelectionList as SelectionList
 
 class FilterModal(FocusNavigationMixin, CustomModal[dict]):
     """A reusable modal to select values to filter by."""
@@ -20,13 +20,13 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
 
     first_open = True
 
+    # - add ability to load previous filters
     def __init__(self, choices: list[dict[str, str | list[str]]], filter_columns: list[str] | None = None):
         super().__init__()
         self.choices = choices
         self.column_names = list(choices[0])
         self.filter_columns = filter_columns if filter_columns else self.column_names
         self.filters: dict[str, list[str]] = {}
-        self.navigation_map: dict[str, dict] = {}
         self.select_ids = []
         self.collapsible_ids = []
 
@@ -77,26 +77,6 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
             self.select_ids.append(f'filter-{column}')
             self.collapsible_ids.append(f'{column}-collapsible')
 
-        for i, select_id in enumerate(self.select_ids):
-            nav = {"left": "", "right": ""}
-
-            # Up
-            if i == 0:
-                nav["up"] = ""
-            else:
-                nav["up"] = self.collapsible_ids[i - 1]
-
-            # Down
-            if i == len(self.select_ids) - 1:
-                nav["down"] = 'filter-done-button'
-            else:
-                nav["down"] = self.collapsible_ids[i + 1]
-
-            self.navigation_map[select_id] = nav
-        
-        self.navigation_map['filter-done-button'] = {'left': 'filter-back-button', 'up': self.collapsible_ids[-1], 'down': '', 'right': ''}
-        self.navigation_map['filter-back-button'] = {'left': '', 'up': self.collapsible_ids[-1], 'down': '', 'right': 'filter-done-button'}
-
         self.grid.mount(Static(id='filter-spacer', classes='filter spacer'))
         self.grid.mount(Button('Back', id='filter-back-button', classes='focusable filter button'))
         self.grid.mount(Button('Done', id='filter-done-button', classes='focusable filter button'))
@@ -140,6 +120,7 @@ class FilterModal(FocusNavigationMixin, CustomModal[dict]):
     def on_collapsible_expanded(self) -> None:
         """Focuses selectionlist inside collapsible when it's expanded."""
         if self.first_open:
+            # needs to happen here, otherwise it's too early
             self.resize_selectionlist()
             self.first_open = False
         focused = self.focused

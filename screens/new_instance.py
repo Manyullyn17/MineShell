@@ -258,15 +258,14 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
 
     def set_install_mode(self, mode: str):
         """Switches between install modes."""
+        # - replace with ContentSwitcher?
         if mode == 'modpack':
             self.install_mode = 'modpack'
-            # self.navigation_map = self.navigation_map_modpack
             # Hide modloader widgets, show modpack widgets
             self.query('.modloader').add_class('hidden')
             self.query('.modpack').remove_class('hidden')
         else:
             self.install_mode = 'modloader'
-            # self.navigation_map = self.navigation_map_modloader
             # Hide modpack widgets, show modloader widgets
             self.query('.modpack').add_class('hidden')
             self.query('.modloader').remove_class('hidden')

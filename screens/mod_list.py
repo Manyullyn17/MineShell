@@ -8,7 +8,8 @@ from textual.containers import Vertical, Horizontal
 from textual.screen import Screen
 from textual.widgets import Button, Static, Footer, Header, Label, DataTable, Input
 
-from screens.modals import DeleteModal, FilterModal, SortModal, ModBrowserModal
+from screens.modals import DeleteModal, FilterModal, SortModal #, ModBrowserModal
+from screens import ModBrowserScreen
 
 from backend.storage import InstanceConfig, ModList
 from helpers import SmartInput, CustomTable, sanitize_filename, FocusNavigationMixin
@@ -18,6 +19,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/mod_list_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
+        Binding('escape', "back", "Back", show=False),
         Binding('delete', "delete", "Delete", show=True),
         Binding('e', "enable_disable", "Enable/Disable", show=True),
         Binding('u', "update", "Update", show=True),
@@ -160,16 +162,19 @@ class ModListScreen(FocusNavigationMixin, Screen):
         modname = mod.name if mod else 'Mod'
         self.app.push_screen(DeleteModal(title=f'Delete {modname}?'), check_delete)
     
-    # - implement enable/disable mod
     def action_enable_disable(self):
-        return
+        if self.selected_mod:
+            self.modlist.toggle_mod(self.selected_mod, self.instance.path)
+            # - need to reload table while keeping filters and sorting
+            self.load_table()
     
     # - implement update mod
     def action_update(self): # update currently selected mod
         return
     
     def action_add_mods(self):
-        self.app.push_screen(ModBrowserModal(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
+        # self.app.push_screen(ModBrowserModal(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
+        self.app.push_screen(ModBrowserScreen(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
 
     def action_filter(self):
         self.filter_table()
@@ -195,6 +200,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
         def filter_chosen(filter: dict | None) -> None:
             """Filter Table using supplied filter."""
             if filter:
+                # - save filters for later use
                 formatted_filters = ' | '.join(
                     f"{col.title()}: {', '.join(val) if isinstance(val, list) else val.strip('[]').replace('\'','')}" 
                     for col, val in filter.items()
@@ -216,6 +222,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
                 self.table.clear()
                 self.load_table()
         
+        # - pass previous filters to modal if available
         self.app.push_screen(FilterModal(self.modlist.to_dict(), ['type', 'enabled', 'source']), filter_chosen)
         return
 
