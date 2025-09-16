@@ -1,5 +1,3 @@
-from hmac import new
-import os
 from datetime import datetime
 from pathlib import Path
 from pydantic import BaseModel, ValidationError, Field
