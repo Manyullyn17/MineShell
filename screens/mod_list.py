@@ -174,7 +174,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
     
     def action_add_mods(self):
         # self.app.push_screen(ModBrowserModal(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
-        self.app.push_screen(ModBrowserScreen(self.instance.modloader, self.instance.minecraft_version, self.instance.source_api))
+        self.app.push_screen(ModBrowserScreen(self.instance))
 
     def action_filter(self):
         self.filter_table()

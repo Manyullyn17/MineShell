@@ -3,10 +3,6 @@ ModalScreen {
 }
 
 #filter-grid {
-    # height: 1fr;
-    # width: 1fr;
-    # max-width: 50%;
-    # max-height: 80%;
     grid-size: 2;
     grid-columns: auto 1fr;
     grid-gutter: 0 1;
@@ -16,7 +12,6 @@ ModalScreen {
 }
 
 .filter.label {
-    # padding-left: 1;
     padding-top: 1;
     width: auto;
     height: 1fr;
@@ -25,9 +20,7 @@ ModalScreen {
 
 .filter.button {
     width: auto;
-    # height: auto;
     height: 3;
-    # margin: 1 0 0 1;
 }
 
 #filter-spacer {
@@ -42,6 +35,5 @@ ModalScreen {
     Contents {
         padding: 1 0 0 1;
     }
-    # margin: 0 2 0 0;
     margin: 0 1 0 0;
 }

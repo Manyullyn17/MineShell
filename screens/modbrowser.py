@@ -6,14 +6,15 @@ from textual.binding import Binding
 from textual.containers import Grid, VerticalGroup, VerticalScroll
 from textual.events import Resize
 from textual.screen import Screen
-from textual.widgets import Static, Label, Button, Checkbox
+from textual.widgets import Header, Footer, Static, Label, Button, Checkbox
 
 from screens.modals import FilterModal
 
 from backend.api import get_minecraft_versions, ModrinthAPI, CurseforgeAPI
 from backend.api.api import SourceAPI
+from backend.storage import InstanceConfig
 
-from helpers import SmartInput, CustomSelect, CustomTable, ModloaderType, FocusNavigationMixin, CustomVerticalScroll
+from helpers import SmartInput, CustomSelect, CustomTable, ModloaderType, FocusNavigationMixin, CustomVerticalScroll, FilterSidebar
 
 class ModBrowserScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
@@ -55,18 +56,19 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 
     COLUMNS = ['Name', 'Author', 'Downloads', 'Type', 'Loaders']
 
-    def __init__(self, modloader: ModloaderType, mc_version: str, source: str = 'modrinth') -> None:
+    def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
-        self.modloader = modloader
-        self.mc_version = mc_version
-        self.source = source
+        self.instance: InstanceConfig = instance
+        self.modloader = instance.modloader
+        self.mc_version = instance.minecraft_version
+        self.source = instance.source_api
         self.source_api: SourceAPI = self.sources[self.source]['api']
 
     def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        
         # main grid
         self.grid = Grid(id='modbrowser-grid', classes='modbrowser grid')
-        self.grid.border_title = 'Mod Browser'
-        self.grid.border_subtitle = 'f to filter'
         with self.grid:
             # top toolbar grid
             with Grid(id='modbrowser-top-grid', classes='modbrowser grid top'):
@@ -118,13 +120,23 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 
             self.filter_label = Label(id='modbrowser-filter-label', classes='modbrowser text label hidden')
             yield self.filter_label
+            yield Footer()
+            filters = {'modloader': [loader for loader in get_args(ModloaderType)], 'Version': ['1.20.1', '1.19.2', '1.18.2', '1.17.1', '1.16.5', '1.15.2', '1.14.4', '1.13.2', '1.12.2'], 'Categories': ['adventure', 'tech', 'magic']}
+            self.filter_sidebar = FilterSidebar(filters, id='modbrowser-filter-sidebar', classes='modbrowser filter-sidebar')
+            yield self.filter_sidebar
 
     async def on_mount(self):
+        self.sub_title = self.instance.name + ' - ModBrowser'
         self.source_select.value = self.source
         self.modloader_select.value = self.modloader
         self.mod_table.add_columns(*self.COLUMNS)
         self.search_mods()
         self.run_worker(self.load_mc_versions(), thread=True)
+
+    @on(Resize)
+    def on_resize(self):
+        # - move sidebar inside a container so it doesn't overlap header and footer instead of this
+        self.filter_sidebar.styles.height = self.size.height - 2
 
     async def load_mc_versions(self):
         """Get Minecraft versions and load into mcversion_select."""
@@ -135,20 +147,6 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
             if self.mc_version in dict(version_ids):
                 self.call_later(self.mcversion_select.set_value, self.mc_version)
         self.mcversion_select.disabled = False
-
-    @on(Resize)
-    def on_resize(self, event: Resize):
-        self.grid.styles.height = max(20, self.size.height * 0.9)
-        self.grid.styles.width = max(81, self.size.width * 0.8)
-        self.query_one('#modbrowser-description-scroll').styles.max_height = f'{self.size.height * 0.15}'
-
-        # - add dynamic button size to other buttons, screens and modals?
-        compact_mode = self.size.height * 0.9 < 25
-        for widget in self.query('.shrink'):
-            if isinstance(widget, (Button, SmartInput, CustomSelect)):
-                widget.compact = compact_mode
-        
-        self.query_one('#modbrowser-top-grid').styles.grid_rows = '1 1' if compact_mode else '3 3'
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
@@ -401,3 +399,4 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 # - redesign to be screen
 # - make custom modlist table using widgets
 # - inspired by modrinth modbrowser
+

@@ -1,6 +1,7 @@
 from typing import TypeVar, Protocol, Any
 
 from textual import on
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
 from textual.css.query import DOMQuery, NoMatches
@@ -248,7 +249,7 @@ class FocusNavigationMixin:
         focused = self.focused
         if isinstance(focused.parent, Collapsible):
             focused = focused.parent
-        if not focused or not focused.id:
+        if not focused:
             return
         try:
             next_widget = self._find_next_focus(focused, direction)
@@ -290,9 +291,16 @@ class CustomSelectionList(SelectionList):
                 screen = self.app.screen
                 if hasattr(screen, "action_focus_move"):
                     getattr(screen, "action_focus_move")(event.key)
-                event.stop()
-                return
-        # Fallback to normal DataTable behavior
+            else:
+                # do selectionlist movement and prevent other navigation
+                match event.key:
+                    case 'up':
+                        self.action_cursor_up()
+                    case 'down':
+                        self.action_cursor_down()
+            event.stop()
+            return
+        # Fallback to normal SelectionList behavior
         return super()._on_key(event)
     
     def on_selection_list_selection_highlighted(self, event: SelectionList.SelectionHighlighted):
@@ -305,3 +313,28 @@ class CustomSelectionList(SelectionList):
             self._last_highlighted = True
         else:
             self._last_highlighted = False
+
+class FilterSidebar(CustomVerticalScroll):
+    def __init__(self, filters: dict[str, list[str]], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filters = filters
+
+    def compose(self) -> ComposeResult:
+        for filter_name, options in self.filters.items():
+            selection_list = CustomSelectionList(*[(opt.title(), opt) for opt in options], compact=True, classes='focusable')
+            collapsible = Collapsible(selection_list, title=filter_name.title(), collapsed=True, classes='modbrowser filter collapsible focusable')
+            yield collapsible
+
+    def get_selected_filters(self) -> dict[str, list[str]]:
+        selected: dict[str, list[str]] = {}
+        for collapsible in self.query(Collapsible):
+            filter_name = collapsible.title.lower()
+            try:
+                selection_list = collapsible.query_one(SelectionList)
+            except NoMatches:
+                continue
+            selected_options = selection_list.selected
+            if selected_options:
+                selected[filter_name] = selected_options
+        return selected
+    
