@@ -50,4 +50,7 @@ class SourceAPI(Protocol):
             Dictionary mapping version_id -> version JSON object
         """
         ...
-    
+
+    async def get_categories(self) -> list[str]:
+        """Get a list of mod categories."""
+        ...

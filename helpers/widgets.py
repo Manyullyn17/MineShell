@@ -1,7 +1,6 @@
-from typing import TypeVar, Protocol, Any
+from typing import TypeVar, Protocol, Any, Callable
 
 from textual import on
-from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
 from textual.css.query import DOMQuery, NoMatches
@@ -177,7 +176,7 @@ class FocusNavigationMixin:
                 focused_region.x,
                 focused_region.y, # use top edge to allow detection of nested widgets in collapsible
                 focused_region.width,
-                self.size.height - focused_region.bottom,
+                self.size.height - focused_region.y,
             )
         elif direction == "left":
             proj_region = Region(
@@ -315,26 +314,72 @@ class CustomSelectionList(SelectionList):
             self._last_highlighted = False
 
 class FilterSidebar(CustomVerticalScroll):
-    def __init__(self, filters: dict[str, list[str]], *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.filters = filters
+        self._categories: dict[str, Collapsible] = {}
 
-    def compose(self) -> ComposeResult:
-        for filter_name, options in self.filters.items():
-            selection_list = CustomSelectionList(*[(opt.title(), opt) for opt in options], compact=True, classes='focusable')
-            collapsible = Collapsible(selection_list, title=filter_name.title(), collapsed=True, classes='modbrowser filter collapsible focusable')
-            yield collapsible
+    def add_category(self, name: str, collapsed: bool = True, wait_for_refresh_cb: Callable | None = None) -> bool:
+        """
+            Add a new filter category with no options yet.
+            Returns:
+                bool\n
+                True if successful.\n
+                False if already exists.
+        """
+        if name.lower() in self._categories:
+            return False
+        
+        selection_list = CustomSelectionList(compact=True, classes=f"{' '.join([c for c in self.classes])} selectionlist focusable")
+        collapsible = Collapsible(
+            selection_list,
+            title=name.title(),
+            collapsed=collapsed,
+            classes=f"{' '.join(self.classes)} collapsible focusable",
+        )
+        self._categories[name.lower()] = collapsible
+        self.mount(collapsible)
+
+        if wait_for_refresh_cb:
+            return self.call_after_refresh(lambda: wait_for_refresh_cb(collapsible))
+        return True
+
+    def add_categories(self, categories: list[str]) -> bool:
+        """Add multiple categories."""
+        for category in categories:
+            if not self.add_category(category):
+                return False
+        return True
+
+    def add_options(self, name: str, options: list[str]) -> bool:
+        """Add options to an existing category (mounts if not present)."""
+        key = name.lower()
+        def _add_to_selectionlist(collapsible: Collapsible) -> bool:
+            """Add options to selectionlist."""
+            try:
+                selection_list = collapsible.query_one(SelectionList)
+            except NoMatches:
+                return False
+            
+            for opt in options:
+                selection_list.add_option((opt.title(), opt))
+            
+            return True
+
+        if key not in self._categories:
+            # auto-create if category not there
+            return self.add_category(name, wait_for_refresh_cb=_add_to_selectionlist)
+        else:
+            collapsible = self._categories[key]
+            return _add_to_selectionlist(collapsible)
 
     def get_selected_filters(self) -> dict[str, list[str]]:
         selected: dict[str, list[str]] = {}
-        for collapsible in self.query(Collapsible):
-            filter_name = collapsible.title.lower()
+        for name, collapsible in self._categories.items():
             try:
                 selection_list = collapsible.query_one(SelectionList)
             except NoMatches:
                 continue
-            selected_options = selection_list.selected
-            if selected_options:
-                selected[filter_name] = selected_options
+            if selection_list.selected:
+                selected[name] = selection_list.selected
         return selected
     

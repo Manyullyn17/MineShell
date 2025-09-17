@@ -20,6 +20,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
+        Binding('escape', "back", "Back", show=False),
         Binding('f', "filter", "Filter", show=True),
         Binding('s', "sort", "Sort", show=True),
         Binding('r', 'reset', 'Reset', show=True),
@@ -121,32 +122,49 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
             self.filter_label = Label(id='modbrowser-filter-label', classes='modbrowser text label hidden')
             yield self.filter_label
             yield Footer()
-            filters = {'modloader': [loader for loader in get_args(ModloaderType)], 'Version': ['1.20.1', '1.19.2', '1.18.2', '1.17.1', '1.16.5', '1.15.2', '1.14.4', '1.13.2', '1.12.2'], 'Categories': ['adventure', 'tech', 'magic']}
-            self.filter_sidebar = FilterSidebar(filters, id='modbrowser-filter-sidebar', classes='modbrowser filter-sidebar')
+            self.filter_sidebar = FilterSidebar(id='modbrowser-filter-sidebar', classes='modbrowser filter-sidebar')
             yield self.filter_sidebar
 
     async def on_mount(self):
         self.sub_title = self.instance.name + ' - ModBrowser'
+
         self.source_select.value = self.source
         self.modloader_select.value = self.modloader
+
         self.mod_table.add_columns(*self.COLUMNS)
         self.search_mods()
-        self.run_worker(self.load_mc_versions(), thread=True)
+
+        self.filter_sidebar.add_categories(['modloader', 'version', 'category'])
+
+        self.get_modloaders()
+        self.get_mc_versions()
+        self.get_categories()
 
     @on(Resize)
     def on_resize(self):
         # - move sidebar inside a container so it doesn't overlap header and footer instead of this
         self.filter_sidebar.styles.height = self.size.height - 2
 
-    async def load_mc_versions(self):
-        """Get Minecraft versions and load into mcversion_select."""
+    @work(thread=True)
+    async def get_modloaders(self):
+        """Get modloaders and add to Filter Sidebar."""
+        modloaders = [loader for loader in get_args(ModloaderType)]
+        self.call_later(self.filter_sidebar.add_options, 'modloader', modloaders)
+
+    @work(thread=True)
+    async def get_mc_versions(self):
+        """Get Minecraft versions and add to Filter Sidebar."""
         mc_versions = await get_minecraft_versions()
-        version_ids: list[tuple[str, str]] = [(v['id'], v['id']) for v in mc_versions]
+        version_ids: list[str] = [v['id'] for v in mc_versions]
         if version_ids:
-            self.call_later(self.mcversion_select.set_options, version_ids)
-            if self.mc_version in dict(version_ids):
-                self.call_later(self.mcversion_select.set_value, self.mc_version)
-        self.mcversion_select.disabled = False
+            self.call_later(self.filter_sidebar.add_options, 'version', version_ids)
+
+    @work(thread=True)
+    async def get_categories(self):
+        """Get categories and add to Filter Sidebar."""
+        categories = await self.source_api.get_categories()
+        if categories:
+            self.call_later(self.filter_sidebar.add_options, 'category', categories)
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
@@ -396,7 +414,6 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         
         self.app.push_screen(FilterModal([{'type': 'Mod'}, {'type': 'Datapack'}], ['type']), filter_chosen)
 
-# - redesign to be screen
 # - make custom modlist table using widgets
 # - inspired by modrinth modbrowser
 

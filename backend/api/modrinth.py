@@ -47,8 +47,8 @@ class ModrinthAPI(SourceAPI):
                 "name": hit["title"], # name to show
                 "author": hit["author"],
                 "downloads": f"{hit['downloads']:,}", # format downloads with commas
-                "modloader": await self.get_modloader_from_categories(hit["categories"]),
-                "categories": await self.get_only_categories_from_categories(hit["categories"]),
+                "modloader": await self._get_modloader_from_categories(hit["categories"]),
+                "categories": await self._get_only_categories_from_categories(hit["categories"]),
                 "slug": hit["slug"],
                 "description": hit["description"],
             })
@@ -56,7 +56,7 @@ class ModrinthAPI(SourceAPI):
         # Return data for the modal
         return f"Select Modpack (Search: {query})", rows
 
-    async def get_modloader_from_categories(self, categories: list[str]) -> list[str]:
+    async def _get_modloader_from_categories(self, categories: list[str]) -> list[str]:
         loaders: list = []
         for cat in categories:
             cat_lower = cat.lower()
@@ -65,7 +65,7 @@ class ModrinthAPI(SourceAPI):
                 loaders.append(cat_lower.title())
         return loaders
     
-    async def get_only_categories_from_categories(self, categories: list[str]) -> list[str]:
+    async def _get_only_categories_from_categories(self, categories: list[str]) -> list[str]:
         categories_list: list = []
         for cat in categories:
             cat_lower = cat.lower()
@@ -192,8 +192,8 @@ class ModrinthAPI(SourceAPI):
                 "name": hit["title"], # name to show
                 "author": hit["author"],
                 "downloads": f"{hit['downloads']:,}", # format downloads with commas
-                "modloader": await self.get_modloader_from_categories(hit["categories"]),
-                "categories": await self.get_only_categories_from_categories(hit["categories"]),
+                "modloader": await self._get_modloader_from_categories(hit["categories"]),
+                "categories": await self._get_only_categories_from_categories(hit["categories"]),
                 "slug": hit["slug"],
                 "description": hit["description"],
                 "type": sorted(type),
@@ -281,3 +281,18 @@ class ModrinthAPI(SourceAPI):
             return []
 
         return versions_list
+
+    async def get_categories(self) -> list[str]:
+        """Get a list of mod categories from Modrinth."""
+        try:
+            raw_categories = await cached_request("tag/category", {})
+
+            categories: list[str] = [
+                cat.get("name")
+                for cat in raw_categories
+                if cat.get("project_type") in ("mod", "datapack")
+            ]
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return []
+        
+        return categories
