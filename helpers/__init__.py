@@ -14,10 +14,12 @@ __all__ = [
     "CustomVerticalScroll",
     "CustomSelectionList",
     "FilterSidebar",
+    "ModCard",
+    "ModList",
 ]
 
 if TYPE_CHECKING:
-    from .widgets import CustomSelect, SmartInput, CustomTable, CustomModal, FocusNavigationMixin, CustomVerticalScroll, CustomSelectionList, FilterSidebar
+    from .widgets import CustomSelect, SmartInput, CustomTable, CustomModal, FocusNavigationMixin, CustomVerticalScroll, CustomSelectionList, FilterSidebar, ModCard, ModList
     from .utils import format_date, sanitize_filename, download_file, ModloaderType
 
 # Map attribute names to their modules
@@ -34,6 +36,8 @@ _lazy_map = {
     "CustomVerticalScroll": ".widgets",
     "CustomSelectionList": ".widgets",
     "FilterSidebar": ".widgets",
+    "ModCard": ".widgets",
+    "ModList": ".widgets",
 }
 
 def __getattr__(name: str):

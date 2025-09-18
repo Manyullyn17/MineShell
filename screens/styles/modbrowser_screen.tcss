@@ -1,70 +1,29 @@
-ModalScreen {
+Screen {
     align: center middle;
 }
 
-.hidden {
-    display: none;
+.modbrowser.top-bar {
+    height: auto;
+    width: 1fr;
 }
 
-.modbrowser.grid {
-    grid-size: 2 3;
-    grid-rows: auto 1fr auto;
-}
-
-.modbrowser.grid.top {
-    grid-size: 6 2;
-    grid-columns: 11 16 1fr 14 8 18;
-    grid-rows: 3 3;
-    column-span: 2;
-    border: none;
-}
-
-.modbrowser.group {
-    height: 100%;
+.modbrowser.modlist.group {
+    # height: 100%;
+    height: 1fr;
     width: 100%;
     border: round $accent-darken-1;
 }
 
-.modbrowser.group.detail {
-    grid-size: 2 7;
-    grid-rows: 1 auto 1 auto 1 1fr auto;
-    grid-columns: 14 1fr;
-}
-
-.modbrowser.description-scroll {
-    column-span: 2;
-}
-
-.modbrowser.text.description {
-    width: 1fr;
-    height: auto;
-}
-
-.modbrowser.dependencies-scroll {
-    height: 1fr;
-    width: 1fr;
-    column-span: 2;
-    padding: 0 0 0 1;
-}
-
 .modbrowser.text {
     content-align: left middle;
-    height: 1fr;
-    width: 1fr;
+    height: 3;
+    width: auto;
     padding-left: 1;
-}
-
-.modbrowser.text.wide {
-    column-span: 2;
 }
 
 .modbrowser.button {
     margin: 0 1;
     width: 18;
-}
-
-.modbrowser.select {
-    width: auto;
 }
 
 .modbrowser.filter-sidebar {
@@ -76,27 +35,22 @@ ModalScreen {
     }
     .selectionlist {
         max-height: 20;
+        .selection-list--button-selected {
+            background: $surface-lighten-1;
+        }
     }
-}
-
-#modbrowser-search {
-    column-span: 2;
-}
-
-#modbrowser-mcversion-label {
-    content-align: right middle;
-}
-
-#modbrowser-description-label {
-    column-span: 2;
-}
-
-#modbrowser-install-button {
-    column-span: 2;
 }
 
 #modbrowser-filter-sidebar {
     dock: left;
     width: 25;
-    height: 30;
+    height: 99%; # don't ask why
+}
+
+.modbrowser.input {
+    width: 1fr;
+}
+
+#modbrowser-source-select {
+    width: 20;
 }

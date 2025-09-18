@@ -1,28 +1,24 @@
-from typing import cast, get_args
+import asyncio
+from typing import get_args
 
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Grid, VerticalGroup, VerticalScroll
-from textual.events import Resize
+from textual.containers import  VerticalGroup, HorizontalGroup
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Label, Button, Checkbox
-
-from screens.modals import FilterModal
+from textual.widgets import Header, Footer, Static, Button
 
 from backend.api import get_minecraft_versions, ModrinthAPI, CurseforgeAPI
 from backend.api.api import SourceAPI
 from backend.storage import InstanceConfig
 
-from helpers import SmartInput, CustomSelect, CustomTable, ModloaderType, FocusNavigationMixin, CustomVerticalScroll, FilterSidebar
+from helpers import SmartInput, CustomSelect, CustomTable, ModloaderType, FocusNavigationMixin, FilterSidebar, ModCard, ModList
 
 class ModBrowserScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
         Binding('escape', "back", "Back", show=False),
-        Binding('f', "filter", "Filter", show=True),
-        Binding('s', "sort", "Sort", show=True),
         Binding('r', 'reset', 'Reset', show=True),
     ] + FocusNavigationMixin.BINDINGS
 
@@ -30,32 +26,20 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         "modrinth": {
             "api": ModrinthAPI(),
             "notify": None,
-            "mod_identifier": "slug",
         },
         "curseforge": {
             "api": CurseforgeAPI(),
+            # - remove once it's implemented
             "notify": "Curseforge support is not yet implemented.",
-            "mod_identifier": "project_id",
         },
     }
 
+    # - switch to dict keyed by slug for fast lookups
     mods: list[dict] = []
 
     selected_mod: dict = {}
 
-    mod_versions: list[dict] = []
-
-    selected_mod_version: dict = {}
-
-    dependencies: list[dict] = []
-
-    dependencies_info: dict = {}
-
-    selected_dependencies: dict[str, bool] = {}
-
-    filters: dict = {}
-
-    COLUMNS = ['Name', 'Author', 'Downloads', 'Type', 'Loaders']
+    COLUMNS = ['Name', 'Author', 'Downloads', 'Type', 'Loaders', 'Categories']
 
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
@@ -68,122 +52,71 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         
-        # main grid
-        self.grid = Grid(id='modbrowser-grid', classes='modbrowser grid')
-        with self.grid:
-            # top toolbar grid
-            with Grid(id='modbrowser-top-grid', classes='modbrowser grid top'):
-                yield Static('Search:', classes='modbrowser text')
-                self.input = SmartInput(placeholder='Search Mods...', id='modbrowser-search', classes='focusable modbrowser input shrink')
-                yield self.input
-                yield Button('Filter', id='modbrowser-filter-button', classes='focusable modbrowser button shrink')
-                yield Static('Source:', classes='modbrowser text')
-                self.source_select = CustomSelect([(key.capitalize(), key) for key in self.sources], allow_blank=False, id='modbrowser-source-select', classes='focusable modbrowser select shrink')
-                yield self.source_select
-
-                yield Static('Modloader:', classes='modbrowser text')
-                self.modloader_select = CustomSelect([(loader.capitalize(), loader) for loader in get_args(ModloaderType)], allow_blank=False, id='modbrowser-modloader-select', classes='focusable modbrowser select shrink')
-                yield self.modloader_select
-                yield Static('MC Version:', id='modbrowser-mcversion-label', classes='modbrowser text')
-                self.mcversion_select = CustomSelect([('...', '...')], allow_blank=False, disabled=True, id='modbrowser-mcversion-select', classes='focusable modbrowser select shrink')
-                yield self.mcversion_select
-
-            # mod list
-            self.list_group = VerticalGroup(classes='modbrowser group')
-            self.list_group.border_title = 'Mods List'
-            with self.list_group:
-                self.mod_table = CustomTable(zebra_stripes=True, cursor_type='row', id='modbrowser-table', classes='focusable modbrowser table')
-                yield self.mod_table
-
-            # mod details grid
-            self.detail_grid = Grid(classes='modbrowser group detail')
-            self.detail_grid.border_title = 'Details'
-            with self.detail_grid:
-                yield Static('Selected Mod:', classes='modbrowser text')
-                self.selected_mod_label = Label('Loading...', id='modbrowser-selected-mod', classes='modbrowser text label')
-                yield self.selected_mod_label
-
-                yield Static('Version:', classes='modbrowser text')
-                self.version_select = CustomSelect([('Loading...', 'Loading...')], allow_blank=False, disabled=True, id='modbrowser-version-select', classes='focusable modbrowser select shrink')
-                yield self.version_select
-
-                yield Static('Description:', id='modbrowser-description-label', classes='modbrowser text')
-                self.description = Static(id='modbrowser-description', classes='modbrowser text description', expand=True)
-                yield VerticalScroll(self.description, id='modbrowser-description-scroll', classes='modbrowser description-scroll')
-
-                # dependencies grid
-                yield Static('Dependencies:', classes='modbrowser text wide')
-                self.dependencies_grid = CustomVerticalScroll(id='modbrowser-dependencies-scroll', classes='modbrowser dependencies-scroll')
-                yield self.dependencies_grid
-
-                self.install_button = Button('Install', id='modbrowser-install-button', classes='focusable modbrowser button shrink')
-                yield self.install_button
-
-            self.filter_label = Label(id='modbrowser-filter-label', classes='modbrowser text label hidden')
-            yield self.filter_label
-            yield Footer()
+        # main group
+        with VerticalGroup(id='modbrowser-group', classes='modbrowser main group'):
+            # filter sidebar
             self.filter_sidebar = FilterSidebar(id='modbrowser-filter-sidebar', classes='modbrowser filter-sidebar')
             yield self.filter_sidebar
+
+            # top toolbar
+            with HorizontalGroup(id='modbrowser-top-bar', classes='modbrowser top-bar'):
+                self.input = SmartInput(placeholder='Search Mods...', id='modbrowser-search', classes='modbrowser input focusable')
+                yield self.input
+                yield Static('Source:', id='modbrowser-source-label' ,classes='modbrowser text')
+                self.source_select = CustomSelect([(key.capitalize(), key) for key in self.sources], allow_blank=False, id='modbrowser-source-select', classes='modbrowser select focusable')
+                yield self.source_select
+                yield Button('Back', id='modbrowser-back-button', classes='focusable modbrowser button')
+
+            # mod list
+            self.list_group = VerticalGroup(classes='modbrowser modlist group')
+            self.list_group.border_title = 'Mods List'
+            with self.list_group:
+                self.mod_table = CustomTable(zebra_stripes=True, cursor_type='row', id='modbrowser-table', classes='modbrowser table focusable')
+                yield self.mod_table
+            self.modlist = ModList(id='modbrowser-modlist', classes='modbrowser modlist focusable')
+            yield self.modlist
+
+            yield Footer()
 
     async def on_mount(self):
         self.sub_title = self.instance.name + ' - ModBrowser'
 
         self.source_select.value = self.source
-        self.modloader_select.value = self.modloader
 
         self.mod_table.add_columns(*self.COLUMNS)
-        self.search_mods()
+        self.search_mods(first_load=True)
 
         self.filter_sidebar.add_categories(['modloader', 'version', 'category'])
 
-        self.get_modloaders()
-        self.get_mc_versions()
-        self.get_categories()
-
-    @on(Resize)
-    def on_resize(self):
-        # - move sidebar inside a container so it doesn't overlap header and footer instead of this
-        self.filter_sidebar.styles.height = self.size.height - 2
+        self.get_filter_options()
 
     @work(thread=True)
-    async def get_modloaders(self):
-        """Get modloaders and add to Filter Sidebar."""
+    async def get_filter_options(self):
+        """Get options for the filter sidebar and populate it."""
         modloaders = [loader for loader in get_args(ModloaderType)]
-        self.call_later(self.filter_sidebar.add_options, 'modloader', modloaders)
+        self.call_later(self.filter_sidebar.add_options, 'modloader', modloaders, [self.modloader])
 
-    @work(thread=True)
-    async def get_mc_versions(self):
-        """Get Minecraft versions and add to Filter Sidebar."""
-        mc_versions = await get_minecraft_versions()
+        mc_versions, categories = await asyncio.gather(get_minecraft_versions(), self.source_api.get_categories())
+        
         version_ids: list[str] = [v['id'] for v in mc_versions]
         if version_ids:
-            self.call_later(self.filter_sidebar.add_options, 'version', version_ids)
-
-    @work(thread=True)
-    async def get_categories(self):
-        """Get categories and add to Filter Sidebar."""
-        categories = await self.source_api.get_categories()
+            self.call_later(self.filter_sidebar.add_options, 'version', version_ids, [self.mc_version])
+        
         if categories:
             self.call_later(self.filter_sidebar.add_options, 'category', categories)
 
+    @on(Button.Pressed)
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
-            case 'back':
+            case 'modbrowser-back-button':
                 self.action_back()
-            case 'modbrowser-install-button':
-                pass
-            case 'modbrowser-filter-button':
-                self.action_filter()
-
-    @on(Checkbox.Changed)
-    def on_dependency_checkbox_changed(self, event: Checkbox.Changed) -> None:
-        if event.checkbox.id and event.checkbox.id.startswith('dep-check-'):
-            project_id = event.checkbox.id.removeprefix('dep-check-')
-            if project_id:
-                self.selected_dependencies[project_id] = event.value
 
     def action_back(self):
         self.dismiss()
+
+    def action_reset(self):
+        self.filter_sidebar.reset_filters()
+        self.search_mods()
 
     @on(CustomSelect.Changed, '#modbrowser-source-select')
     def on_source_select_changed(self, event: CustomSelect.Changed) -> None:
@@ -195,56 +128,30 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
                 self.notify(notify, severity='information', timeout=5)
             self.search_mods()
 
-    @on(CustomSelect.Changed, '#modbrowser-modloader-select')
-    def on_modloader_select_changed(self, event: CustomSelect.Changed) -> None:
-        if event.value != self.modloader:
-            self.modloader = cast(ModloaderType, str(event.value).lower())
-            self.search_mods()
-
-    @on(CustomSelect.Changed, '#modbrowser-mcversion-select')
-    def on_mcversion_select_changed(self, event: CustomSelect.Changed) -> None:
-        if event.value != self.mc_version and event.value != '...':
-            self.mc_version = str(event.value)
-            self.search_mods()
-
-    @on(CustomSelect.Changed, '#modbrowser-version-select')
-    def on_version_select_changed(self, event: CustomSelect.Changed) -> None:
-        selected_version_number = str(event.value)
-        new_selected_version = next((v for v in self.mod_versions if v.get('version_number') == selected_version_number), None)
-        if new_selected_version and new_selected_version.get('id') != self.selected_mod_version.get('id'):
-            self.selected_mod_version = new_selected_version
-            self.dependencies = self.selected_mod_version.get('dependencies', [])
-            self.run_worker(self.load_dependencies())
-
     @on(CustomTable.RowSelected)
     async def on_data_table_row_selected(self, event: CustomTable.RowSelected) -> None:
         new_row = event.row_key.value
         if new_row == self.selected_mod.get('slug'):
             return
-        selected_row = str(event.row_key.value) or 'Select a Mod'
-        self.version_select.set_options([('Loading...', 'Loading...')])
-        self.version_select.disabled = True
-        self.dependencies_grid.remove_children()
-        self.dependencies_grid.mount(Static('Loading Dependencies...', classes='modbrowser text wide'))
-        await self.load_versions(selected_row)
+        selected_row = str(event.row_key.value)
+        # - open details screen for mod
 
-    @on(SmartInput.Submitted)
+    @on(SmartInput.Submitted, '#modbrowser-search')
     def on_input_submitted(self, event: SmartInput.Submitted) -> None:
-        match event.input.id:
-            case 'modbrowser-search':
-                self.search_mods()
-            case default:
-                return
+        self.search_mods()
 
     @work(thread=True)
-    async def search_mods(self):
+    async def search_mods(self, first_load: bool = False):
         """Search mods on the selected source."""
+        self.call_later(lambda: setattr(self.mod_table, 'loading', True))
         query = self.input.value
-        filters = {
-            'modloader': [self.modloader],
-            'mc_version': [self.mc_version],
-        }
-        filters.update(self.filters)
+        if first_load:
+            filters = {
+                'modloader': [self.modloader],
+                'version': [self.mc_version],
+            }
+        else:
+            filters = self.filter_sidebar.get_selected_filters()
 
         data = await self.source_api.search_mods(query, filters=filters)
         self.mod_table.clear()
@@ -253,26 +160,9 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         else:
             self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
 
-    @work(thread=True)
-    async def get_mod_versions(self, project_id: str):
-        """Get versions for selected mod."""
-        self.mod_versions = await self.source_api.get_mod_versions(project_id, self.mc_version, self.modloader)
-        if not self.mod_versions:
-            self.call_later(self.version_select.set_options, [('No versions found', '')])
-            self.dependencies = []
-            self.run_worker(self.load_dependencies())
-            return
-
-        version_numbers = [(version.get('version_number', ''), version.get('version_number', '')) for version in self.mod_versions]
-        self.selected_mod_version = self.mod_versions[0]
-        self.dependencies = self.selected_mod_version.get('dependencies', [])
-        self.call_later(self.version_select.set_options, version_numbers)
-        self.version_select.disabled = False
-        self.run_worker(self.load_dependencies())
-
     async def load_mods(self, data: list[dict] | None = None):
         """Load mods into the table."""
-        self.mod_table.loading = True
+        # self.mod_table.loading = True
         self.mod_table.clear(columns=True)
         self.mod_table.add_columns(*self.COLUMNS)
         if data:
@@ -284,135 +174,19 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
                     mod.get('downloads', ''),
                     ', '.join(mod.get('type', '')).title(),
                     ', '.join(mod.get('modloader', [])),
+                    ', '.join(mod.get('categories', [])),
                     # - curseforge support? duplicate project id in poject_id and slug for curseforge?
                     key=mod.get('slug')
                 )
         else:
-            self.mod_table.add_row("No results found", key="")
+            self.mod_table.add_row("No results found")
         self.mod_table.loading = False
+        self.modlist.set_mods(self.mods)
 
-        selected_row = next(iter(self.mod_table.rows.keys())).value
-        await self.load_versions(selected_row)
-
-    async def load_versions(self, mod_id: str | None):
-        """Load versions for selected mod."""
-        if not mod_id:
-            return
-        identifier = self.sources[self.source]['mod_identifier']
-        self.selected_mod = [mod for mod in self.mods if mod.get(identifier, '') == mod_id][0]
-        self.selected_mod_label.update(self.selected_mod.get('name', ''))
-        self.description.update(self.selected_mod.get('description', 'Not Available'))
-        self.get_mod_versions(self.selected_mod.get(identifier))
-
-    async def load_dependencies(self):
-        """"Load dependencies for selected version."""
-        self.dependencies_grid.remove_children()
-        self.dependencies_grid.mount(Static('Loading Dependencies...', classes='modbrowser text wide'))
-
-        self.dependencies_info = {}
-        self.selected_dependencies = {}
-
-        if not self.dependencies:
-            self.dependencies_grid.remove_children()
-            self.dependencies_grid.mount(Static('No dependencies for this version.', classes='modbrowser text wide'))
-            return
-
-        project_ids = [dep['project_id'] for dep in self.dependencies if dep.get('project_id')]
-        if not project_ids:
-            self.dependencies_grid.remove_children()
-            self.dependencies_grid.mount(Static('No dependencies with project IDs found.', classes='modbrowser text wide'))
-            return
-
-        self.dependencies_info = await self.source_api.fetch_projects(project_ids, filter_server_side=False)
-
-        await self.dependencies_grid.remove_children()
-
-        if not self.dependencies_info and project_ids:
-            self.dependencies_grid.mount(Static('Could not fetch dependency info. Some may be client-side only.', classes='modbrowser text wide'))
-            return
-
-        def sort_deps(dep):
-            """Sort dependencies by type and name."""
-            proj_id = dep.get('project_id', '')
-            proj_info = self.dependencies_info.get(proj_id, {})
-            proj_support = proj_info.get('server_side', '')
-            title = proj_info.get('title', '')
-            ret = title
-
-            if proj_support == 'required':
-                priority = 0
-            elif proj_support == 'unsupported':
-                priority = 2
-            elif not title:
-                priority = 3
-                ret = proj_id
-            else:
-                priority = 1
-
-            return (priority, ret)
-
-        for dep in sorted(self.dependencies, key=sort_deps):
-            project_id = dep.get('project_id', '')
-            project_info = self.dependencies_info.get(project_id)
-
-            # - dependency selection only on pressing "install" -> modal; in details just include dependencies as text
-            # - save dependencies to more easily install them afterwards
-
-            is_required = dep.get('dependency_type') == 'required'
-            checkbox_value = is_required
-            checkbox_disabled = False
-            if not project_info:
-                # The project ID from the dependency list was not found by the API.
-                dep_name = f"{project_id or 'Unknown'} [yellow](Not Found)[/yellow]"
-                checkbox_value = False
-                checkbox_disabled = True
-            else:
-                dep_name = project_info.get('title', project_id)
-                # If a dependency is client-side only, disable its checkbox and indicate it.
-                if project_info.get('server_side') == 'unsupported':
-                    checkbox_value = False
-                    checkbox_disabled = True
-                    dep_name += ' [red](Client-side)[/red]'
-
-            dep_type = dep.get('dependency_type', 'unknown')
-            if project_id:
-                self.selected_dependencies[project_id] = checkbox_value
-
-            dep_type_styled = f"({dep_type})"
-            match dep_type:
-                case 'required':
-                    dep_type_styled = f"([green]{dep_type}[/green])"
-                case 'optional':
-                    dep_type_styled = f"([yellow]{dep_type}[/yellow])"
-                case 'incompatible':
-                    dep_type_styled = f"([red]{dep_type}[/red])"
-                    checkbox_value = False
-                    checkbox_disabled = True
-                case default:
-                    dep_type_styled = f"({dep_type})"
-
-            checkbox = Checkbox(f'{dep_name} {dep_type_styled}', value=checkbox_value, disabled=checkbox_disabled, compact=True, id=f"dep-check-{project_id}", classes='focusable modbrowser checkbox')
-
-            self.dependencies_grid.mount(checkbox)
-
-    def action_filter(self):
-        """Open the filter modal."""
-        def filter_chosen(filter: dict | None) -> None:
-            if filter:
-                formatted_filters = ' | '.join(
-                    f"{col.title()}: {', '.join(val) if isinstance(val, list) else val.strip('[]').replace('\'','')}" 
-                    for col, val in filter.items()
-                )
-                self.filter_label.update(f'Filter: {formatted_filters}')
-                self.filter_label.remove_class('hidden')
-                self.filters = filter
-            else:
-                self.filter_label.update('')
-                self.filter_label.add_class('hidden')
-                self.filters = {}
-            self.search_mods()
-        
-        self.app.push_screen(FilterModal([{'type': 'Mod'}, {'type': 'Datapack'}], ['type']), filter_chosen)
+    @on(ModCard.Selected)
+    def on_mod_card_selected(self, event: ModCard.Selected) -> None:
+        selected_mod = event.mod
+        # - open mod detail screen and pass selected_mod to it
 
 # - make custom modlist table using widgets
 # - inspired by modrinth modbrowser

@@ -67,9 +67,10 @@ class ModrinthAPI(SourceAPI):
     
     async def _get_only_categories_from_categories(self, categories: list[str]) -> list[str]:
         categories_list: list = []
+        all_categories = await self.get_categories()
         for cat in categories:
             cat_lower = cat.lower()
-            if cat_lower not in MODLOADERS:
+            if cat_lower in all_categories:
                 # Capitalize nicely for display
                 categories_list.append(cat_lower.title())
         return categories_list
@@ -154,8 +155,8 @@ class ModrinthAPI(SourceAPI):
                     project_types = [pt.lower() for pt in filters.get('type', ['mod', 'datapack'])]
                     facets.append([f"project_type:{pt}" for pt in project_types])
 
-                    if 'mc_version' in filters:
-                        facets.append([f"versions:{v}" for v in filters['mc_version']])
+                    if 'version' in filters:
+                        facets.append([f"versions:{v}" for v in filters['version']])
 
                     # This handles the logic for "(mod AND modloader) OR datapack".
                     # By adding 'categories:datapack' to the modloader filter group, we ensure that
@@ -165,6 +166,10 @@ class ModrinthAPI(SourceAPI):
                         if 'datapack' in project_types:
                             modloader_facets.append("categories:datapack")
                         facets.append(modloader_facets)
+
+                    if 'category' in filters:
+                        facets.append([f"categories:{v}" for v in filters['category']])
+
 
                 params = {
                     "query": query,

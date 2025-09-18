@@ -2,13 +2,15 @@ from typing import TypeVar, Protocol, Any, Callable
 
 from textual import on
 from textual.binding import Binding
-from textual.containers import VerticalScroll
+from textual.containers import VerticalScroll, Horizontal
 from textual.css.query import DOMQuery, NoMatches
-from textual.events import MouseDown, Key
+from textual.events import MouseDown, Key, Enter, Leave
 from textual.geometry import Region
+from textual.message import Message
+from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widget import Widget
-from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList
+from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList, Static
 
 class CustomSelect(Select):
     def on_key(self, event: Key):
@@ -195,20 +197,27 @@ class FocusNavigationMixin:
 
         candidates = get_candidates(self)
         
+        expanded_width = focused_region.width * 2
+        expanded_x = focused_region.x - focused_region.width // 2
+
         # If nothing intersects, expand projection to full row/column
         if not candidates:
             if direction == "up":
                 proj_region = Region(
+                    # 0,
+                    expanded_x,
                     0,
-                    0,
-                    self.size.width,
+                    # self.size.width,
+                    expanded_width,
                     focused_region.y - 1
                 )
             elif direction == "down":
                 proj_region = Region(
-                    0,
+                    # 0,
+                    expanded_x,
                     focused_region.bottom,
-                    self.size.width,
+                    # self.size.width,
+                    expanded_width,
                     self.size.height - focused_region.bottom,
                 )
             elif direction == "left":
@@ -317,6 +326,7 @@ class FilterSidebar(CustomVerticalScroll):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._categories: dict[str, Collapsible] = {}
+        self._default_filters: dict[str, list[str]] = {}
 
     def add_category(self, name: str, collapsed: bool = True, wait_for_refresh_cb: Callable | None = None) -> bool:
         """
@@ -350,7 +360,7 @@ class FilterSidebar(CustomVerticalScroll):
                 return False
         return True
 
-    def add_options(self, name: str, options: list[str]) -> bool:
+    def add_options(self, name: str, options: list[str], selected: list[str] = []) -> bool:
         """Add options to an existing category (mounts if not present)."""
         key = name.lower()
         def _add_to_selectionlist(collapsible: Collapsible) -> bool:
@@ -360,19 +370,21 @@ class FilterSidebar(CustomVerticalScroll):
             except NoMatches:
                 return False
             
+            self._default_filters[key] = selected
             for opt in options:
-                selection_list.add_option((opt.title(), opt))
+                selection_list.add_option((opt.title(), opt, opt in selected))
             
             return True
 
         if key not in self._categories:
             # auto-create if category not there
-            return self.add_category(name, wait_for_refresh_cb=_add_to_selectionlist)
+            return self.add_category(key, wait_for_refresh_cb=_add_to_selectionlist)
         else:
             collapsible = self._categories[key]
             return _add_to_selectionlist(collapsible)
 
     def get_selected_filters(self) -> dict[str, list[str]]:
+        """Get currently selected filters."""
         selected: dict[str, list[str]] = {}
         for name, collapsible in self._categories.items():
             try:
@@ -383,3 +395,113 @@ class FilterSidebar(CustomVerticalScroll):
                 selected[name] = selection_list.selected
         return selected
     
+    def reset_filters(self):
+        for name, collapsible in self._categories.items():
+            try:
+                selection_list = collapsible.query_one(SelectionList)
+            except NoMatches:
+                continue
+            selection_list.deselect_all()
+            if self._default_filters and name in self._default_filters.keys():
+                for opt in self._default_filters[name]:
+                    selection_list.select(opt)
+
+    def clear_options(self, name: str) -> bool:
+        """Clear all options for a given filter category."""
+        key = name.lower()
+        if key not in self._categories:
+            return False
+
+        try:
+            selection_list = self._categories[key].query_one(SelectionList)
+        except NoMatches:
+            return False
+
+        selection_list.clear_options()
+        if key in self._default_filters:
+            del self._default_filters[key]
+
+        return True
+
+class ModCard(Static):
+    """A single mod card that displays mod info and is selectable."""
+    DEFAULT_CSS = """
+    ModCard {
+        border: solid $accent;
+        padding: 1 2;
+        margin: 1;
+        background: $surface;
+    }
+
+    Modcard.selected {
+        border: solid $success;
+        background: $accent-darken-2;
+    }
+
+    ModCard:hover {
+        background: $boost;
+    }
+    """
+
+    class Selected(Message):
+        """Posted when the card is clicked/selected."""
+        def __init__(self, sender: "ModCard", mod: dict) -> None:
+            super().__init__()
+            self.mod = mod
+            self.sender = sender
+
+    is_hovered = reactive(False)
+    is_selected = reactive(False)
+
+    def __init__(self, mod: dict, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mod = mod
+        self.classes = "modcard focusable"
+
+    def compose(self):
+        yield Static(self.mod.get("name", "Unnamed"), classes="modcard-name")
+        yield Static(f"by {self.mod.get('author', 'Unknown')}", classes="modcard-author")
+        yield Static(self.mod.get("description", ""), classes="modcard-description")
+        with Horizontal(classes="modcard-tags"):
+            yield Static(", ".join(self.mod.get("modloader", [])), classes="modcard-loaders")
+            yield Static(", ".join(self.mod.get("categories", [])), classes="modcard-categories")
+        yield Static(f"Downloads: {self.mod.get('downloads', 0)}", classes="modcard-downloads")
+
+    def on_click(self) -> None:
+        self.post_message(self.Selected(self, self.mod))
+
+    def on_enter(self, event: Enter) -> None:
+        self.is_hovered = True
+
+    def on_leave(self, event: Leave) -> None:
+        # - fix hover stopping when hovering children
+        any_child_hovered = any(child.mouse_hover for child in self.walk_children())
+        if not any_child_hovered:
+            self.is_hovered = False
+
+    def watch_is_selected(self, selected: bool) -> None:
+        self.set_class(selected, "selected")
+
+    def watch_is_hovered(self, value: bool):
+        self.set_class(value, "hovered")
+
+class ModList(CustomVerticalScroll):
+    """Container for multiple mod cards."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cards: list[ModCard] = []
+
+    def set_mods(self, mods: list[dict]):
+        self.cards.clear()
+        self.remove_children()
+        for mod in mods:
+            card = ModCard(mod)
+            self.cards.append(card)
+            self.mount(card)
+
+    def on_mod_card_selected(self, event: ModCard.Selected) -> None:
+        # Deselect others
+        for card in self.cards:
+            card.is_selected = False
+        event.sender.is_selected = True
