@@ -2,15 +2,15 @@ from typing import TypeVar, Protocol, Any, Callable
 
 from textual import on
 from textual.binding import Binding
-from textual.containers import VerticalScroll, Horizontal
+from textual.containers import VerticalScroll, Horizontal, VerticalGroup
 from textual.css.query import DOMQuery, NoMatches
-from textual.events import MouseDown, Key, Enter, Leave
+from textual.events import MouseDown, Key, Enter, Leave, Focus, Blur
 from textual.geometry import Region
 from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widget import Widget
-from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList, Static
+from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList, Static, LoadingIndicator
 
 class CustomSelect(Select):
     def on_key(self, event: Key):
@@ -427,19 +427,67 @@ class ModCard(Static):
     """A single mod card that displays mod info and is selectable."""
     DEFAULT_CSS = """
     ModCard {
-        border: solid $accent;
-        padding: 1 2;
+        border: solid $accent-darken-1;
+        padding: 1 2 0 2;
         margin: 1;
         background: $surface;
+        height: 10;
+
+        .spacer {
+            width: 1fr;
+        }
+
+        .header {
+            height: 2;
+
+            .name {
+                width: auto;
+                color: $accent-lighten-1;
+            }
+
+            .author {
+                width: auto;
+                color: $foreground-darken-2;
+            }
+
+            .downloads {
+                width: auto;
+            }
+        }
+
+        .description {
+            height: 1fr;
+        }
+
+        .tags {
+            .loaders {
+                content-align: left middle;
+                height: 1fr;
+                width: auto;
+            }
+
+            .categories {
+                content-align: left middle;
+                height: 1fr;
+                width: auto;
+            }
+        }
     }
 
-    Modcard.selected {
-        border: solid $success;
-        background: $accent-darken-2;
-    }
-
-    ModCard:hover {
+    ModCard.selected {
+        border: double $accent-lighten-1;
         background: $boost;
+    }
+
+    ModCard.hovered {
+        background: $boost;
+    }
+
+    ModCard.modcard-loading-indicator {
+        background: $panel-darken-1;
+        color: $accent;
+        height: 1fr;
+        width: 1fr;
     }
     """
 
@@ -450,58 +498,99 @@ class ModCard(Static):
             self.mod = mod
             self.sender = sender
 
-    is_hovered = reactive(False)
+    can_focus = True
     is_selected = reactive(False)
 
-    def __init__(self, mod: dict, *args, **kwargs):
+    def __init__(self, mod: dict | None = None, loading: bool = False, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mod = mod
+        self.mod = mod or {}
+        self.loading_placeholder = loading
         self.classes = "modcard focusable"
 
     def compose(self):
-        yield Static(self.mod.get("name", "Unnamed"), classes="modcard-name")
-        yield Static(f"by {self.mod.get('author', 'Unknown')}", classes="modcard-author")
-        yield Static(self.mod.get("description", ""), classes="modcard-description")
-        with Horizontal(classes="modcard-tags"):
-            yield Static(", ".join(self.mod.get("modloader", [])), classes="modcard-loaders")
-            yield Static(", ".join(self.mod.get("categories", [])), classes="modcard-categories")
-        yield Static(f"Downloads: {self.mod.get('downloads', 0)}", classes="modcard-downloads")
+        if not self.loading_placeholder:
+            with Horizontal(classes="modcard header"):
+                yield Static(self.mod.get("name", "Unnamed"), classes="modcard header name")
+                yield Static(f" by {self.mod.get('author', 'Unknown')}", classes="modcard header author")
+                yield Static(classes='modcard header spacer')
+                yield Static(f"Downloads: {self.mod.get('downloads', 0)}", classes="modcard header downloads")
+            yield Static(self.mod.get("description", ""), classes="modcard description")
+            with Horizontal(classes="modcard tags"):
+                yield Static(", ".join(self.mod.get("modloader", [])), classes="modcard tags loaders")
+                yield Static(classes='modcard tags spacer')
+                yield Static(", ".join(self.mod.get("categories", [])), classes="modcard tags categories")
+            self.border_subtitle = ", ".join(self.mod.get('type', '')).title()
+        else:
+            yield LoadingIndicator(classes='modcard-loading-indicator')
+            self.disabled = True
 
     def on_click(self) -> None:
         self.post_message(self.Selected(self, self.mod))
 
     def on_enter(self, event: Enter) -> None:
-        self.is_hovered = True
+        self.set_class(self.is_mouse_over, "hovered")
 
     def on_leave(self, event: Leave) -> None:
-        # - fix hover stopping when hovering children
-        any_child_hovered = any(child.mouse_hover for child in self.walk_children())
-        if not any_child_hovered:
-            self.is_hovered = False
+        self.set_class(self.is_mouse_over, "hovered")
+
+    def on_focus(self, event: Focus) -> None:
+        self.is_selected = True
+
+    def on_blur(self, event: Blur) -> None:
+        self.is_selected = False
 
     def watch_is_selected(self, selected: bool) -> None:
         self.set_class(selected, "selected")
 
-    def watch_is_hovered(self, value: bool):
-        self.set_class(value, "hovered")
-
 class ModList(CustomVerticalScroll):
     """Container for multiple mod cards."""
+
+    custom_loading = reactive(False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cards: list[ModCard] = []
+        self.loading_cards: list[ModCard] = []
+
+    def on_mount(self):
+        for _ in range(5):
+            card = ModCard(loading=True, classes='loading-card')
+            self.loading_cards.append(card)
+            self.mount(card)
 
     def set_mods(self, mods: list[dict]):
         self.cards.clear()
-        self.remove_children()
+        self.remove_children('.card')
+        self.add_mods(mods)
+
+    def add_mods(self, mods: list[dict]):
         for mod in mods:
-            card = ModCard(mod)
+            card = ModCard(mod, classes='card')
             self.cards.append(card)
             self.mount(card)
+        self.custom_loading = False
 
     def on_mod_card_selected(self, event: ModCard.Selected) -> None:
         # Deselect others
         for card in self.cards:
             card.is_selected = False
         event.sender.is_selected = True
+
+    def watch_custom_loading(self, loading: bool) -> None:
+        self.scroll_home(animate=False, immediate=True)
+        self.disabled = loading
+        self.show_cards(loading)
+
+    def show_cards(self, loading: bool = False) -> None:
+        if not loading:
+            for card in self.loading_cards:
+                card.add_class('hidden')
+            for card in self.cards:
+                card.remove_class('hidden')
+        else:
+            for card in self.loading_cards:
+                card.remove_class('hidden')
+            for card in self.cards:
+                card.add_class('hidden')
+
+# - make modlist capture modcard event and forward it's own event?

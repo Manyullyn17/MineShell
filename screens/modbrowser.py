@@ -39,8 +39,6 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 
     selected_mod: dict = {}
 
-    COLUMNS = ['Name', 'Author', 'Downloads', 'Type', 'Loaders', 'Categories']
-
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
         self.instance: InstanceConfig = instance
@@ -68,25 +66,19 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
                 yield Button('Back', id='modbrowser-back-button', classes='focusable modbrowser button')
 
             # mod list
-            self.list_group = VerticalGroup(classes='modbrowser modlist group')
-            self.list_group.border_title = 'Mods List'
-            with self.list_group:
-                self.mod_table = CustomTable(zebra_stripes=True, cursor_type='row', id='modbrowser-table', classes='modbrowser table focusable')
-                yield self.mod_table
-            self.modlist = ModList(id='modbrowser-modlist', classes='modbrowser modlist focusable')
+            self.modlist = ModList(id='modbrowser-modlist', classes='modbrowser modlist')
             yield self.modlist
 
             yield Footer()
 
     async def on_mount(self):
-        self.sub_title = self.instance.name + ' - ModBrowser'
+        self.sub_title = self.instance.name + ' > ModBrowser'
 
         self.source_select.value = self.source
 
-        self.mod_table.add_columns(*self.COLUMNS)
         self.search_mods(first_load=True)
 
-        self.filter_sidebar.add_categories(['modloader', 'version', 'category'])
+        self.filter_sidebar.add_categories(['modloader', 'version', 'type', 'category'])
 
         self.get_filter_options()
 
@@ -95,6 +87,9 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         """Get options for the filter sidebar and populate it."""
         modloaders = [loader for loader in get_args(ModloaderType)]
         self.call_later(self.filter_sidebar.add_options, 'modloader', modloaders, [self.modloader])
+
+        types = ['mod', 'datapack']
+        self.call_later(self.filter_sidebar.add_options, 'type', types, types)
 
         mc_versions, categories = await asyncio.gather(get_minecraft_versions(), self.source_api.get_categories())
         
@@ -143,7 +138,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
     @work(thread=True)
     async def search_mods(self, first_load: bool = False):
         """Search mods on the selected source."""
-        self.call_later(lambda: setattr(self.mod_table, 'loading', True))
+        self.call_later(lambda: setattr(self.modlist, 'custom_loading', True))
         query = self.input.value
         if first_load:
             filters = {
@@ -154,34 +149,10 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
             filters = self.filter_sidebar.get_selected_filters()
 
         data = await self.source_api.search_mods(query, filters=filters)
-        self.mod_table.clear()
         if data:
-            self.call_later(self.load_mods, data)
+            self.call_later(self.modlist.set_mods, data)
         else:
             self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
-
-    async def load_mods(self, data: list[dict] | None = None):
-        """Load mods into the table."""
-        # self.mod_table.loading = True
-        self.mod_table.clear(columns=True)
-        self.mod_table.add_columns(*self.COLUMNS)
-        if data:
-            self.mods = data
-            for mod in data:
-                self.mod_table.add_row(
-                    mod.get('name', ''),
-                    mod.get('author', ''),
-                    mod.get('downloads', ''),
-                    ', '.join(mod.get('type', '')).title(),
-                    ', '.join(mod.get('modloader', [])),
-                    ', '.join(mod.get('categories', [])),
-                    # - curseforge support? duplicate project id in poject_id and slug for curseforge?
-                    key=mod.get('slug')
-                )
-        else:
-            self.mod_table.add_row("No results found")
-        self.mod_table.loading = False
-        self.modlist.set_mods(self.mods)
 
     @on(ModCard.Selected)
     def on_mod_card_selected(self, event: ModCard.Selected) -> None:

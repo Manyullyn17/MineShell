@@ -2,6 +2,10 @@ Screen {
     align: center middle;
 }
 
+.hidden {
+    display: none;
+}
+
 .modbrowser.top-bar {
     height: auto;
     width: 1fr;
@@ -9,7 +13,8 @@ Screen {
 
 .modbrowser.modlist.group {
     # height: 100%;
-    height: 1fr;
+    # height: 1fr;
+    height: 0;
     width: 100%;
     border: round $accent-darken-1;
 }
