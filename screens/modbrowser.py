@@ -12,7 +12,7 @@ from backend.api import get_minecraft_versions, ModrinthAPI, CurseforgeAPI
 from backend.api.api import SourceAPI
 from backend.storage import InstanceConfig
 
-from helpers import SmartInput, CustomSelect, CustomTable, ModloaderType, FocusNavigationMixin, FilterSidebar, ModCard, ModList
+from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin, FilterSidebar, ModList
 
 class ModBrowserScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
@@ -66,7 +66,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
                 yield Button('Back', id='modbrowser-back-button', classes='focusable modbrowser button')
 
             # mod list
-            self.modlist = ModList(id='modbrowser-modlist', classes='modbrowser modlist')
+            self.modlist = ModList(id='modbrowser-modlist', classes='modbrowser modlist focusable')
             yield self.modlist
 
             yield Footer()
@@ -75,6 +75,8 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         self.sub_title = self.instance.name + ' > ModBrowser'
 
         self.source_select.value = self.source
+
+        self.input.focus()
 
         self.search_mods(first_load=True)
 
@@ -123,14 +125,6 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
                 self.notify(notify, severity='information', timeout=5)
             self.search_mods()
 
-    @on(CustomTable.RowSelected)
-    async def on_data_table_row_selected(self, event: CustomTable.RowSelected) -> None:
-        new_row = event.row_key.value
-        if new_row == self.selected_mod.get('slug'):
-            return
-        selected_row = str(event.row_key.value)
-        # - open details screen for mod
-
     @on(SmartInput.Submitted, '#modbrowser-search')
     def on_input_submitted(self, event: SmartInput.Submitted) -> None:
         self.search_mods()
@@ -154,11 +148,10 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         else:
             self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
 
-    @on(ModCard.Selected)
-    def on_mod_card_selected(self, event: ModCard.Selected) -> None:
+    @on(ModList.Selected)
+    def on_mod_list_selected(self, event: ModList.Selected) -> None:
         selected_mod = event.mod
         # - open mod detail screen and pass selected_mod to it
 
-# - make custom modlist table using widgets
 # - inspired by modrinth modbrowser
 

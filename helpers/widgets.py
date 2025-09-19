@@ -150,6 +150,8 @@ class FocusNavigationMixin:
                         continue
                 except NoMatches:
                     pass
+                if current in w.children:
+                    continue
                 if w.focusable:
                     candidates.append(w)
                 elif isinstance(w, Collapsible):
@@ -255,7 +257,7 @@ class FocusNavigationMixin:
 
     def action_focus_move(self: FocusableScreen, direction: str):
         focused = self.focused
-        if isinstance(focused.parent, Collapsible):
+        if focused and isinstance(focused.parent, Collapsible):
             focused = focused.parent
         if not focused:
             return
@@ -267,7 +269,7 @@ class FocusNavigationMixin:
             self.notify(f"Failed to move focus. {e}", severity="error", timeout=5)
 
 class CustomVerticalScroll(VerticalScroll):
-    def on_key(self, event):
+    def on_key(self, event: Key):
         """Override to make up/down move focus instead of scrolling."""
         if event.key in ("up", "down"):
             # Call the screen's focus movement
@@ -505,7 +507,8 @@ class ModCard(Static):
         super().__init__(*args, **kwargs)
         self.mod = mod or {}
         self.loading_placeholder = loading
-        self.classes = "modcard focusable"
+        # self.classes = "modcard focusable"
+        self.classes = "modcard"
 
     def compose(self):
         if not self.loading_placeholder:
@@ -534,6 +537,8 @@ class ModCard(Static):
         self.set_class(self.is_mouse_over, "hovered")
 
     def on_focus(self, event: Focus) -> None:
+        if event.from_app_focus:
+            return
         self.is_selected = True
 
     def on_blur(self, event: Blur) -> None:
@@ -545,12 +550,20 @@ class ModCard(Static):
 class ModList(CustomVerticalScroll):
     """Container for multiple mod cards."""
 
+    class Selected(Message):
+        """Posted when a mod card is selected."""
+        def __init__(self, sender: "ModList", mod: dict) -> None:
+            super().__init__()
+            self.mod = mod
+            self.sender = sender
+
     custom_loading = reactive(False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cards: list[ModCard] = []
         self.loading_cards: list[ModCard] = []
+        self.index = 0
 
     def on_mount(self):
         for _ in range(5):
@@ -558,9 +571,33 @@ class ModList(CustomVerticalScroll):
             self.loading_cards.append(card)
             self.mount(card)
 
+    def on_key(self, event: Key):
+        """Override to make ModList scroll up and down and release focus if reaching either end"""
+        if event.key in ['up', 'down']:
+            if event.key == 'up' and self.index > 0:
+                self.index -= 1
+                self.focus_card(self.index)
+            elif event.key == 'down' and self.index < len(self.cards) - 1:
+                self.index += 1
+                self.focus_card(self.index)
+            else:
+                return super().on_key(event)
+            event.stop()
+            event.prevent_default()
+            return
+        return super().on_key(event)
+
+    def on_focus(self, event: Focus):
+        self.focus_card(self.index)
+        event.stop()
+
+    def focus_card(self, index: int):
+        self.cards[index].focus()
+
     def set_mods(self, mods: list[dict]):
         self.cards.clear()
         self.remove_children('.card')
+        self.index = 0
         self.add_mods(mods)
 
     def add_mods(self, mods: list[dict]):
@@ -571,10 +608,13 @@ class ModList(CustomVerticalScroll):
         self.custom_loading = False
 
     def on_mod_card_selected(self, event: ModCard.Selected) -> None:
+        self.index = self.cards.index(event.sender)
         # Deselect others
         for card in self.cards:
             card.is_selected = False
         event.sender.is_selected = True
+        event.stop()
+        self.post_message(self.Selected(self, event.mod))
 
     def watch_custom_loading(self, loading: bool) -> None:
         self.scroll_home(animate=False, immediate=True)
@@ -593,4 +633,4 @@ class ModList(CustomVerticalScroll):
             for card in self.cards:
                 card.add_class('hidden')
 
-# - make modlist capture modcard event and forward it's own event?
+# - rework navigation to work like with selectionlist, if next mod card is off screen it doesn't scroll
