@@ -573,19 +573,21 @@ class ModList(CustomVerticalScroll):
 
     def on_key(self, event: Key):
         """Override to make ModList scroll up and down and release focus if reaching either end"""
-        if event.key in ['up', 'down']:
-            if event.key == 'up' and self.index > 0:
-                self.index -= 1
-                self.focus_card(self.index)
-            elif event.key == 'down' and self.index < len(self.cards) - 1:
-                self.index += 1
-                self.focus_card(self.index)
-            else:
-                return super().on_key(event)
+        if event.key not in ('up', 'down'):
+            return super().on_key(event)
+
+        # Determine the new index
+        new_index = self.index - 1 if event.key == 'up' else self.index + 1
+
+        # If we're within bounds, move focus
+        if 0 <= new_index < len(self.cards):
+            self.index = new_index
+            self.focus_card(self.index)
             event.stop()
             event.prevent_default()
-            return
-        return super().on_key(event)
+        else:
+            # At the boundary, defer to the normal handler
+            return super().on_key(event)
 
     def on_focus(self, event: Focus):
         self.focus_card(self.index)
@@ -632,5 +634,3 @@ class ModList(CustomVerticalScroll):
                 card.remove_class('hidden')
             for card in self.cards:
                 card.add_class('hidden')
-
-# - rework navigation to work like with selectionlist, if next mod card is off screen it doesn't scroll
