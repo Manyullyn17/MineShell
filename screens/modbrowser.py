@@ -150,7 +150,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 
     @on(ModList.Selected)
     def on_mod_list_selected(self, event: ModList.Selected) -> None:
-        selected_mod = event.mod
+        selected_mod = event.item
         # - open mod detail screen and pass selected_mod to it
 
 # - inspired by modrinth modbrowser

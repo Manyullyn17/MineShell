@@ -3,17 +3,22 @@ import importlib
 
 __all__ = [
     "FilterSidebar",
+    "CustomList",
+    "Card",
     "ModList",
     "ModCard",
 ]
 
 if TYPE_CHECKING:
-    from .filtersidebar  import FilterSidebar
+    from .filtersidebar import FilterSidebar
+    from .customlist import CustomList, Card
     from .modlist import ModList, ModCard
 
 # Map attribute names to their modules
 _lazy_map = {
     "FilterSidebar": ".filtersidebar",
+    "CustomList": ".customlist",
+    "Card": ".customlist",
     "ModList": ".modlist",
     "ModCard": ".modlist",
 }
