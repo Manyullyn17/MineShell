@@ -12,7 +12,8 @@ from backend.api import get_minecraft_versions, ModrinthAPI, CurseforgeAPI
 from backend.api.api import SourceAPI
 from backend.storage import InstanceConfig
 
-from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin, FilterSidebar, ModList
+from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin
+from widgets import FilterSidebar, ModList
 
 class ModBrowserScreen(FocusNavigationMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
@@ -34,7 +35,6 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         },
     }
 
-    # - switch to dict keyed by slug for fast lookups
     mods: list[dict] = []
 
     selected_mod: dict = {}
