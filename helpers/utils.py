@@ -40,3 +40,10 @@ async def download_file(url: str, dest: Path, progress_cb=None, step=None, cance
                     downloaded += len(chunk)
                     if progress_cb:
                         progress_cb(total, downloaded, step=step)
+
+def strip_images(text: str) -> str:
+    # remove HTML <img ...> tags
+    text = re.sub(r'<img[^>]*>', '[image removed]', text)
+    # remove Markdown images ![alt](url)
+    text = re.sub(r'!\[.*?\]\(.*?\)', '[image removed]', text)
+    return text

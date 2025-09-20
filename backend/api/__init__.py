@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 import importlib
 
 __all__ = [
+    "SourceAPI",
     "CurseforgeAPI",
     "FTBAPI",
     "ModrinthAPI",
@@ -14,6 +15,7 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
+    from .sourceapi import SourceAPI
     from .curseforge import CurseforgeAPI
     from .ftb import FTBAPI
     from .modrinth import ModrinthAPI
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
 
 # Map attribute names to their modules
 _lazy_map = {
+    "SourceAPI": ".sourceapi",
     "CurseforgeAPI": ".curseforge",
     "FTBAPI": ".ftb",
     "ModrinthAPI": ".modrinth",

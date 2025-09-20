@@ -8,9 +8,10 @@ from textual.containers import  VerticalGroup, HorizontalGroup
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Static, Button
 
-from backend.api import get_minecraft_versions, ModrinthAPI, CurseforgeAPI
-from backend.api.api import SourceAPI
+from backend.api import get_minecraft_versions, SourceAPI, ModrinthAPI, CurseforgeAPI
 from backend.storage import InstanceConfig
+
+from screens import ModDetailScreen
 
 from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin
 from widgets import FilterSidebar, ModList
@@ -69,7 +70,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
             self.modlist = ModList(id='modbrowser-modlist', classes='modbrowser modlist focusable')
             yield self.modlist
 
-            yield Footer()
+        yield Footer()
 
     async def on_mount(self):
         self.sub_title = self.instance.name + ' > ModBrowser'
@@ -149,9 +150,9 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
             self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
 
     @on(ModList.Selected)
-    def on_mod_list_selected(self, event: ModList.Selected) -> None:
+    async def on_mod_list_selected(self, event: ModList.Selected) -> None:
         selected_mod = event.item
-        # - open mod detail screen and pass selected_mod to it
+        self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or ''))
 
 # - inspired by modrinth modbrowser
 

@@ -77,21 +77,21 @@ class ModCard(Card):
 
     def __init__(self, mod: dict | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mod = mod or {}
+        self.item = mod or {}
         self.classes = "modcard"
 
     def compose(self):
         with Horizontal(classes="modcard header"):
-            yield Static(self.mod.get("name", "Unnamed"), classes="modcard header name")
-            yield Static(f" by {self.mod.get('author', 'Unknown')}", classes="modcard header author")
+            yield Static(self.item.get("name", "Unnamed"), classes="modcard header name")
+            yield Static(f" by {self.item.get('author', 'Unknown')}", classes="modcard header author")
             yield Static(classes='modcard header spacer')
-            yield Static(f"Downloads: {self.mod.get('downloads', 0)}", classes="modcard header downloads")
-        yield Static(self.mod.get("description", ""), classes="modcard description")
+            yield Static(f"Downloads: {self.item.get('downloads', 0)}", classes="modcard header downloads")
+        yield Static(self.item.get("description", ""), classes="modcard description")
         with Horizontal(classes="modcard tags"):
-            yield Static(", ".join(self.mod.get("modloader", [])), classes="modcard tags loaders")
+            yield Static(", ".join(self.item.get("modloader", [])), classes="modcard tags loaders")
             yield Static(classes='modcard tags spacer')
-            yield Static(", ".join(self.mod.get("categories", [])), classes="modcard tags categories")
-        self.border_subtitle = ", ".join(self.mod.get('type', '')).title()
+            yield Static(", ".join(self.item.get("categories", [])), classes="modcard tags categories")
+        self.border_subtitle = ", ".join(self.item.get('type', '')).title()
 
 class ModList(CustomList):
     """Container for multiple mod cards."""

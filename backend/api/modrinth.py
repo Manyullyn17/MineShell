@@ -1,6 +1,6 @@
 import httpx, json
 from aiocache import cached
-from backend.api.sourceapi import SourceAPI
+from backend.api import SourceAPI
 
 MODRINTH_API = "https://api.modrinth.com/v2"
 MODLOADERS = {"fabric", "forge", "quilt", "neoforge"}
@@ -202,6 +202,7 @@ class ModrinthAPI(SourceAPI):
                 "slug": hit["slug"],
                 "description": hit["description"],
                 "type": sorted(type),
+                "client_side": hit["client_side"],
                 "server_side": hit["server_side"],
                 "versions": hit["versions"],
                 "project_id": hit["project_id"],
@@ -209,25 +210,37 @@ class ModrinthAPI(SourceAPI):
 
         # Return data for the modal
         return rows
+    
+    async def get_mod(self, project_id: str) -> dict:
+        """Fetch project info for a given project ID from Modrinth."""
+        if not project_id:
+            return {}
 
-    async def get_mod_versions(self, project_id: str, mc_version: str, modloader: str) -> list[dict]:
+        try:
+            project: dict = await cached_request(f"project/{project_id}", {})
+        except (httpx.ReadTimeout, httpx.TimeoutException):
+            return {}
+        
+        return project
+
+    async def get_mod_versions(self, project_id: str, mc_version: str | None = None, modloader: str | None = None) -> list[dict]:
         """
         Returns a list of versions for a given Modrinth project ID.
-        Each item is [version_name, date_published].
         Sorted newest first.
         """
         try:
-            params={
-                "game_versions": f'["{mc_version}"]',
-                "loaders": f'["{modloader}"]',
-            }
+            params = {}
+            if mc_version:
+                params['game_version'] = f'["{mc_version}"]'
+            if modloader:
+                params['loader'] = f'["{modloader}"]'
+
             versions: list[dict] = await cached_request(f"project/{project_id}/version", params)
         except (httpx.ReadTimeout, httpx.TimeoutException):
             return []
         # Sort newest first
         versions.sort(key=lambda v: v["date_published"], reverse=True)
 
-        # Build simplified list
         return versions
 
     async def fetch_projects(self, project_ids: list[str], filter_server_side: bool = True) -> dict[str, dict]:

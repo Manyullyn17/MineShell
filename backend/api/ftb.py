@@ -1,5 +1,5 @@
 import httpx
-from backend.api.sourceapi import SourceAPI
+from backend.api import SourceAPI
 
 FTB_API = ""
 MODLOADERS = {"fabric", "forge", "quilt", "neoforge"}
