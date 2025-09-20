@@ -12,8 +12,6 @@ Screen {
 }
 
 .modbrowser.modlist.group {
-    # height: 100%;
-    # height: 1fr;
     height: 0;
     width: 100%;
     border: round $accent-darken-1;

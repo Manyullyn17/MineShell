@@ -71,6 +71,10 @@ class Card(Static):
     def on_click(self) -> None:
         self.post_message(self.Selected(self, self.item))
 
+    def on_key(self, event: Key) -> None:
+        if event.key == 'enter':
+            self.on_click()
+
     def on_enter(self, event: Enter) -> None:
         self.set_class(self.is_mouse_over, "hovered")
 

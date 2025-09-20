@@ -1,0 +1,36 @@
+Screen {
+    align: center middle;
+}
+
+TabbedContent {
+    height: 1fr;
+}
+
+.mod-detail.header {
+    height: auto;
+}
+
+.mod-detail.name {
+    width: auto;
+    color: $accent-lighten-1;
+    padding: 0 0 0 1;
+}
+
+.mod-detail.author {
+    width: auto;
+    color: $foreground-darken-2;
+    padding: 0 0 0 1;
+}
+
+.mod-detail.header.spacer {
+    width: 1fr;
+}
+
+.mod-detail.downloads {
+    width: auto;
+    padding: 0 1;
+}
+
+.mod-detail.description.text {
+    padding: 1;
+}

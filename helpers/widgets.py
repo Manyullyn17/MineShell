@@ -8,7 +8,7 @@ from textual.events import MouseDown, Key
 from textual.geometry import Region
 from textual.screen import ModalScreen
 from textual.widget import Widget
-from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList
+from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList, TabbedContent
 
 class CustomSelect(Select):
     def on_key(self, event: Key):
@@ -139,6 +139,9 @@ class FocusNavigationMixin:
         def get_candidates(self) -> list[Widget]:
             candidates = []
             for w in self.query('.focusable'):
+                if isinstance(w, TabbedContent):
+                    # if TabbedContent, use ContentTabs for region
+                    w = w.query_one('ContentTabs')
                 # if same widget or not in region, skip
                 if w == current or not w.region.intersection(proj_region):
                     continue
@@ -150,13 +153,13 @@ class FocusNavigationMixin:
                     pass
                 if current in w.children:
                     continue
-                if w.focusable:
-                    candidates.append(w)
-                elif isinstance(w, Collapsible):
+                if isinstance(w, Collapsible):
                     # find the CollapsibleTitle child of the collapsible
                     title = w.query_one('CollapsibleTitle')
                     if title:
                         candidates.append(title)
+                else:
+                    candidates.append(w)
             return candidates
 
         # Get focused widget region
@@ -267,9 +270,18 @@ class FocusNavigationMixin:
             self.notify(f"Failed to move focus. {e}", severity="error", timeout=5)
 
 class CustomVerticalScroll(VerticalScroll):
+    allow_scroll = False
+
+    def __init__(self, *args, allow_scroll: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.allow_scroll = allow_scroll
+
     def on_key(self, event: Key):
         """Override to make up/down move focus instead of scrolling."""
-        if event.key in ("up", "down"):
+        if not self.allow_scroll or \
+            event.key in ('left', 'right') or \
+            (event.key == 'up' and self.scroll_y == 0) or \
+            (event.key == 'down' and self.scroll_y == self.max_scroll_y):
             # Call the screen's focus movement
             screen = self.app.screen
             if hasattr(screen, "action_focus_move"):
