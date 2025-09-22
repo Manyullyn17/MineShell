@@ -152,7 +152,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
     @on(ModList.Selected)
     async def on_mod_list_selected(self, event: ModList.Selected) -> None:
         selected_mod = event.item
-        self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or ''))
+        self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or '', self.instance))
 
 # - inspired by modrinth modbrowser
 

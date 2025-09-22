@@ -278,10 +278,10 @@ class CustomVerticalScroll(VerticalScroll):
 
     def on_key(self, event: Key):
         """Override to make up/down move focus instead of scrolling."""
-        if not self.allow_scroll or \
-            event.key in ('left', 'right') or \
-            (event.key == 'up' and self.scroll_y == 0) or \
-            (event.key == 'down' and self.scroll_y == self.max_scroll_y):
+        if (not self.allow_scroll and event.key in ("up", "down")) or \
+            (self.allow_scroll and ((event.key == "up" and self.scroll_y == 0) or
+            (event.key == "down" and self.scroll_y == self.max_scroll_y))) or \
+            event.key in ("left", "right"):
             # Call the screen's focus movement
             screen = self.app.screen
             if hasattr(screen, "action_focus_move"):

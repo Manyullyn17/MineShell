@@ -6,6 +6,24 @@ from textual.widgets import Collapsible, SelectionList
 from helpers import CustomVerticalScroll, CustomSelectionList
 
 class FilterSidebar(CustomVerticalScroll):
+    DEFAULT_CSS = """
+    FilterSidebar {
+        .collapsible {
+            Contents {
+                padding: 1 1 0 0;
+            }
+            margin: 0 1 0 0;
+        }
+        .selectionlist {
+            max-height: 20;
+            .selection-list--button-selected {
+                background: $surface-lighten-1;
+            }
+            width: 1fr;
+        }
+    }
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._categories: dict[str, Collapsible] = {}
@@ -22,7 +40,7 @@ class FilterSidebar(CustomVerticalScroll):
         if name.lower() in self._categories:
             return False
         
-        selection_list = CustomSelectionList(compact=True, classes=f"{' '.join([c for c in self.classes])} selectionlist focusable")
+        selection_list = CustomSelectionList(compact=True, classes=f"{' '.join(self.classes)} selectionlist focusable")
         collapsible = Collapsible(
             selection_list,
             title=name.title(),

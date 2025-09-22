@@ -31,6 +31,31 @@ TabbedContent {
     padding: 0 1;
 }
 
-.mod-detail.description.text {
-    padding: 1;
+.mod-detail.description {
+    .text {
+        padding: 1;
+    }
+    .scroll {
+        width: 1fr;
+    }
+    .info {
+        width: 20;
+        padding: 0 1;
+        .static {
+            padding: 0;
+            color: $accent;
+        }
+        .label {
+            width: 1fr;
+            padding: 0 0 1 0;
+        }
+    }
+}
+
+.mod-detail.versions.filter-sidebar {
+    width: 25;
+    SelectionList {
+        width: 1fr;
+        margin: 0 2 0 0;
+    }
 }

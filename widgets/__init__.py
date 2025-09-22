@@ -7,12 +7,15 @@ __all__ = [
     "Card",
     "ModList",
     "ModCard",
+    "VersionList",
+    "VersionCard",
 ]
 
 if TYPE_CHECKING:
     from .filtersidebar import FilterSidebar
     from .customlist import CustomList, Card
     from .modlist import ModList, ModCard
+    from .versionlist import VersionList, VersionCard
 
 # Map attribute names to their modules
 _lazy_map = {
@@ -21,6 +24,8 @@ _lazy_map = {
     "Card": ".customlist",
     "ModList": ".modlist",
     "ModCard": ".modlist",
+    "VersionList": ".versionlist",
+    "VersionCard": ".versionlist",
 }
 
 def __getattr__(name: str):

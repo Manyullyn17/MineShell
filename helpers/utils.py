@@ -8,7 +8,7 @@ from config import DATE_FORMAT
 ModloaderType = Literal["fabric", "forge", "neoforge", "quilt"]
 
 def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
-    """Convert an ISO8601 datetime string (from Mojang API) into the global DATE_FORMAT."""
+    """Convert an ISO8601 datetime string into the global DATE_FORMAT."""
     # Mojang uses trailing Z for UTC, Python needs +00:00
     dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
     return dt.strftime(format)
