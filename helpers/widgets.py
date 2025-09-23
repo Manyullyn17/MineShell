@@ -6,7 +6,8 @@ from textual.containers import VerticalScroll
 from textual.css.query import DOMQuery, NoMatches
 from textual.events import MouseDown, Key
 from textual.geometry import Region
-from textual.screen import ModalScreen
+from textual.screen import ModalScreen, Screen
+from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import Select, Input, DataTable, Collapsible, SelectionList, TabbedContent
 
@@ -334,3 +335,22 @@ class CustomSelectionList(SelectionList):
         else:
             self._last_highlighted = False
 
+class DebounceMixin:
+    def __init__(self):
+        super().__init__()
+        self._debounce_timers: dict[str, Timer] = {}
+
+    def debounce(self, name: str, delay: float, callback):
+        """
+        Schedule a debounced callback.
+        `name` identifies the timer, `delay` is seconds,
+        `callback` is the function to call.
+        """
+        # cancel existing timer
+        if name in self._debounce_timers:
+            timer = self._debounce_timers[name]
+            if timer._active:
+                timer.stop()
+
+        # set a new timer
+        self._debounce_timers[name] = self.set_timer(delay, callback) # type: ignore

@@ -3,7 +3,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.timer import Timer
+# from textual.timer import Timer
 from textual.widgets import Header, Footer, Label, TabbedContent, TabPane, Static, Button
 from rich.markdown import Markdown
 
@@ -13,10 +13,10 @@ from backend.storage import InstanceConfig
 
 from screens.modals import TextDisplayModal
 
-from helpers import FocusNavigationMixin, strip_images, CustomVerticalScroll
+from helpers import FocusNavigationMixin, strip_images, CustomVerticalScroll, DebounceMixin
 from widgets import FilterSidebar, VersionList
 
-class ModDetailScreen(FocusNavigationMixin, Screen):
+class ModDetailScreen(FocusNavigationMixin, DebounceMixin, Screen):
     CSS_PATH = 'styles/mod_detail_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
@@ -27,8 +27,6 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
         "modrinth": ModrinthAPI(),
         "curseforge": CurseforgeAPI(),
     }
-
-    _filter_timer: Timer | None = None
 
     def __init__(self, mod: dict, source: str, sub_title: str, instance: InstanceConfig) -> None:
         super().__init__()
@@ -133,10 +131,7 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
     @on(FilterSidebar.FilterChanged)
     def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
         if event.filter:
-            if self._filter_timer and self._filter_timer._active:
-                self._filter_timer.stop()
-            
-            self._filter_timer = self.set_timer(0.5, lambda: self._set_filters(event))
+            self.debounce('filter', 0.5, lambda: self._set_filters(event))
 
     def _set_filters(self, event: FilterSidebar.FilterChanged):
         if event.filter:

@@ -14,10 +14,10 @@ from backend.storage import InstanceConfig
 
 from screens import ModDetailScreen
 
-from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin
+from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin, DebounceMixin
 from widgets import FilterSidebar, ModList
 
-class ModBrowserScreen(FocusNavigationMixin, Screen):
+class ModBrowserScreen(FocusNavigationMixin, DebounceMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
@@ -40,10 +40,6 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
     mods: list[dict] = []
 
     selected_mod: dict = {}
-
-    _input_timer: Timer | None = None
-
-    _filter_timer: Timer | None = None
 
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
@@ -133,10 +129,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 
     @on(SmartInput.Changed, '#modbrowser-search')
     def on_input_changed(self, event: SmartInput.Changed) -> None:
-        if self._input_timer and self._input_timer._active:
-            self._input_timer.stop()
-
-        self._input_timer = self.set_timer(0.5, self.search_mods)
+        self.debounce('search', 0.5, self.search_mods)
 
     @work(thread=True)
     async def search_mods(self, first_load: bool = False):
@@ -159,10 +152,7 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
 
     @on(FilterSidebar.FilterChanged)
     def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
-        if self._filter_timer and self._filter_timer._active:
-            self._filter_timer.stop()
-        
-        self._filter_timer = self.set_timer(0.5, self.search_mods)
+        self.debounce('search', 0.5, self.search_mods)
 
     @on(ModList.Selected)
     async def on_mod_list_selected(self, event: ModList.Selected) -> None:
