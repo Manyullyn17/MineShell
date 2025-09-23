@@ -3,6 +3,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
+from textual.timer import Timer
 from textual.widgets import Header, Footer, Label, TabbedContent, TabPane, Static, Button
 from rich.markdown import Markdown
 
@@ -27,6 +28,8 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
         "curseforge": CurseforgeAPI(),
     }
 
+    _filter_timer: Timer | None = None
+
     def __init__(self, mod: dict, source: str, sub_title: str, instance: InstanceConfig) -> None:
         super().__init__()
         self.mod = mod
@@ -34,10 +37,9 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
         self.source_api: SourceAPI = self.sources[self.source]
         self.sub_title = sub_title + f' > {mod.get('name', '')}'
         self.instance = instance
-        # - if modloader or mc_version not in mod versions -> don't filter
         self.modloader = instance.modloader
         self.mc_version = instance.minecraft_version
-        self.filters = {'loaders': [self.modloader], 'game_versions': [self.mc_version], 'version_type': ['release', 'beta', 'alpha']}
+        self.filters = {'loaders': [self.modloader], 'game_versions': [self.mc_version]}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -96,9 +98,15 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
 
         modloaders = list({loader for version in mod_versions for loader in version.get('loaders', [])})
 
+        if self.modloader not in modloaders:
+            self.filters['loaders'] = []
+
         release_versions = [v.get('id', '') for v in await get_minecraft_versions()]
         present_versions = list({mc_version for version in mod_versions for mc_version in version.get('game_versions', [])})
         mc_versions = [v for v in release_versions if v in present_versions]
+
+        if self.mc_version not in mc_versions:
+            self.filters['game_versions'] = []
 
         possible_types = ["release", "beta", "alpha"]
         types = [t for t in possible_types if any(v.get("version_type") == t for v in mod_versions)]
@@ -107,7 +115,7 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
 
         self.filter_sidebar.add_options('modloader', sorted(modloaders), [self.modloader])
         self.filter_sidebar.add_options('version', mc_versions, [self.mc_version])
-        self.filter_sidebar.add_options('type', types, types)
+        self.filter_sidebar.add_options('type', types)
 
         self.call_later(self.version_list.set_versions, self.mod_versions, self.filters)
 
@@ -124,6 +132,13 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
 
     @on(FilterSidebar.FilterChanged)
     def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
+        if event.filter:
+            if self._filter_timer and self._filter_timer._active:
+                self._filter_timer.stop()
+            
+            self._filter_timer = self.set_timer(0.5, lambda: self._set_filters(event))
+
+    def _set_filters(self, event: FilterSidebar.FilterChanged):
         if event.filter:
             self.filters[event.filter] = list(event.selected)
             self.version_list.filter_versions(self.filters)
