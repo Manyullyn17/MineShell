@@ -1,13 +1,13 @@
 from textual import on
 from textual.binding import Binding
-from textual.containers import Grid, VerticalScroll
+from textual.containers import Grid
 from textual.events import Resize
 from textual.widgets import Button, Static
 from rich.markdown import Markdown
 
-from helpers import CustomModal
+from helpers import CustomModal, FocusNavigationMixin, CustomVerticalScroll
 
-class TextDisplayModal(CustomModal[str | None]):
+class TextDisplayModal(FocusNavigationMixin, CustomModal[str | None]):
     """General-purpose scrollable text modal.
 
     Args:
@@ -21,7 +21,7 @@ class TextDisplayModal(CustomModal[str | None]):
     BINDINGS = [
         ("q", "back", "Back"),
         Binding('escape', 'back', show=False),
-    ]
+    ] + FocusNavigationMixin.BINDINGS
 
     def __init__(self, title: str, text: str, fixed_width: int = 0, fixed_height: int = 0, markdown: bool = True) -> None:
         super().__init__()
@@ -48,8 +48,8 @@ class TextDisplayModal(CustomModal[str | None]):
         self.grid = Grid(id="tdm-grid")
 
         with self.grid:
-            yield VerticalScroll(content, id="tdm-scroll")
-            yield Button("Close", id="tdm-close")
+            yield CustomVerticalScroll(content, allow_scroll=True, id="tdm-scroll", classes='tdm scroll focusable')
+            yield Button("Close", id="tdm-close", classes='tdm button focusable')
 
     def on_mount(self):
         if self.fixed_width:

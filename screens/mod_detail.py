@@ -10,6 +10,8 @@ from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI
 from backend.api.mojang import get_minecraft_versions
 from backend.storage import InstanceConfig
 
+from screens.modals import TextDisplayModal
+
 from helpers import FocusNavigationMixin, strip_images, CustomVerticalScroll
 from widgets import FilterSidebar, VersionList
 
@@ -32,17 +34,13 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
         self.source_api: SourceAPI = self.sources[self.source]
         self.sub_title = sub_title + f' > {mod.get('name', '')}'
         self.instance = instance
+        # - if modloader or mc_version not in mod versions -> don't filter
         self.modloader = instance.modloader
         self.mc_version = instance.minecraft_version
+        self.filters = {'loaders': [self.modloader], 'game_versions': [self.mc_version], 'version_type': ['release', 'beta', 'alpha']}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        
-        with Horizontal(classes='mod-detail header'):
-            yield Static(self.mod.get('name', ''), classes='mod-detail name')
-            yield Static(f'by {self.mod.get('author', '')}', classes='mod-detail author')
-            yield Static(classes='mod-detail header spacer')
-            yield Static(f'Downloads: {self.mod.get("downloads", 0)}', classes='mod-detail downloads')
 
         with TabbedContent(classes='focusable'):
             with TabPane('Description'):
@@ -52,6 +50,10 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
                     yield CustomVerticalScroll(self.description_label, allow_scroll=True, classes='mod-detail description scroll focusable')
 
                     with Vertical(classes='mod-detail description info'):
+                        yield Static(self.mod.get('name', ''), classes='mod-detail description info static')
+                        yield Static(f'by {self.mod.get('author', '')}', classes='mod-detail description info label')
+                        yield Static('Downloads:', classes='mod-detail description info static')
+                        yield Label(self.mod.get("downloads", 0), classes='mod-detail description info label')
                         yield Static('Loaders:', classes='mod-detail description info static')
                         yield Label(f'{', '.join(self.mod.get("modloader", ""))}', classes='mod-detail description info label')
                         yield Static('Categories:', classes='mod-detail description info static')
@@ -70,13 +72,11 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
                     self.version_list = VersionList(classes='mod-detail versions version-list focusable')
                     self.version_list.custom_loading = True
                     yield self.version_list
-
         
-
         yield Footer()
 
     async def on_mount(self):
-        self.filter_sidebar.add_categories(['modloader', 'version', 'type'])
+        self.filter_sidebar.add_categories([('modloader', 'loaders'), ('version', 'game_versions'), ('type', 'version_type')])
 
         self.get_mod_info()
         self.get_mod_versions()
@@ -91,7 +91,7 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
 
     @work(thread=True)
     async def get_mod_versions(self):
-        # mod_versions: id, version_number, changelog, files[url, filename, primary]
+        # mod_versions: id, version_number, files[url, filename, primary], dependencies[version_id | None, project_id, dependency_type]
         mod_versions = await self.source_api.get_mod_versions(str(self.mod.get('project_id')))
 
         modloaders = list({loader for version in mod_versions for loader in version.get('loaders', [])})
@@ -107,13 +107,9 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
 
         self.filter_sidebar.add_options('modloader', sorted(modloaders), [self.modloader])
         self.filter_sidebar.add_options('version', mc_versions, [self.mc_version])
-        self.filter_sidebar.add_options('type', types)
+        self.filter_sidebar.add_options('type', types, types)
 
-        versions = [v for v in self.mod_versions if self.mc_version in v.get('game_versions', [])]
-
-        self.call_later(self.version_list.set_versions, versions)
-
-        self.call_later(lambda: setattr(self.version_list, 'custom_loading', False))
+        self.call_later(self.version_list.set_versions, self.mod_versions, self.filters)
 
     def update_markdown_label(self, label: Label, text):
         label.update(Markdown(text))
@@ -126,6 +122,18 @@ class ModDetailScreen(FocusNavigationMixin, Screen):
     def action_back(self):
         self.dismiss()
 
-    @on(VersionList.Selected)
-    async def on_version_list_selected(self, event: VersionList.Selected) -> None:
-        selected_version = event.item
+    @on(FilterSidebar.FilterChanged)
+    def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
+        if event.filter:
+            self.filters[event.filter] = list(event.selected)
+            self.version_list.filter_versions(self.filters)
+
+    @on(VersionList.ButtonPressed)
+    def on_version_list_button_pressed(self, event: VersionList.ButtonPressed) -> None:
+        match event.button:
+            case 'changelog':
+                self.app.push_screen(TextDisplayModal(f'Changelog - {event.item.get('name', '')}', event.item.get('changelog', '')))
+            case 'install':
+                # - add install logic hee
+                pass
+

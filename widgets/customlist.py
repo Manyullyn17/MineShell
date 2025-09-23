@@ -3,7 +3,7 @@ from textual.events import Key, Enter, Leave, Focus, Blur
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static, LoadingIndicator
+from textual.widgets import Static, LoadingIndicator, Button
 
 from helpers import CustomVerticalScroll
 
@@ -37,7 +37,6 @@ class PlaceholderCard(Static):
 class Card(Static):
     """A single card that displays stuff and is selectable."""
     BINDINGS = [
-        Binding("enter", "enter", priority=True),
         Binding("left", "move_focus('left')", priority=True),
         Binding("right", "move_focus('right')", priority=True),
     ]
@@ -68,6 +67,14 @@ class Card(Static):
             self.item = item
             self.sender = sender
 
+    class ButtonPressed(Message):
+        """Posted when a button is pressed."""
+        def __init__(self, sender: "Card", button: str) -> None:
+            super().__init__()
+            self.sender = sender
+            self.button = button
+            self.item = sender.item
+
     _switched_focus = False
     can_focus = True
     is_selected = reactive(False)
@@ -80,8 +87,14 @@ class Card(Static):
     def on_click(self) -> None:
         self.post_message(self.Selected(self, self.item))
 
-    def action_enter(self):
-        self.on_click()
+    def on_key(self, event: Key):
+        if event.key == 'enter' and self.has_focus:
+            self.on_click()
+            event.stop()
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id:
+            self.post_message(self.ButtonPressed(self, event.button.id))
 
     def on_enter(self, event: Enter) -> None:
         self.set_class(self.is_mouse_over, "hovered")
@@ -155,6 +168,14 @@ class CustomList(CustomVerticalScroll):
             self.item = item
             self.sender = sender
 
+    class ButtonPressed(Message):
+        """Posted when a button is pressed."""
+        def __init__(self, sender: "CustomList", button: str, item: dict) -> None:
+            super().__init__()
+            self.sender = sender
+            self.button = button
+            self.item = item
+
     custom_loading = reactive(False)
 
     def __init__(self, placeholder_count: int = 5, *args, **kwargs):
@@ -219,20 +240,19 @@ class CustomList(CustomVerticalScroll):
         event.stop()
         self.post_message(self.Selected(self, event.item))
 
+    def on_card_button_pressed(self, event: Card.ButtonPressed) -> None:
+        self.post_message(self.ButtonPressed(self, event.button, event.item))
+        event.stop()
+
     def watch_custom_loading(self, loading: bool) -> None:
         self.scroll_home(animate=False, immediate=True)
         self.disabled = loading
         self.show_cards(loading)
 
     def show_cards(self, loading: bool = False) -> None:
-        if not loading:
-            for card in self.loading_cards:
-                card.add_class('hidden')
-            for card in self.cards:
-                card.remove_class('hidden')
-        else:
-            for card in self.loading_cards:
-                card.remove_class('hidden')
-            for card in self.cards:
-                card.add_class('hidden')
+        for card in self.loading_cards:
+            card.set_class(not loading, 'hidden')
+        for card in self.cards:
+            card.set_class(loading, 'hidden')
+        self.refresh(layout=True)
 

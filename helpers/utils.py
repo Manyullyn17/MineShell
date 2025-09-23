@@ -10,8 +10,11 @@ ModloaderType = Literal["fabric", "forge", "neoforge", "quilt"]
 def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
     """Convert an ISO8601 datetime string into the global DATE_FORMAT."""
     # Mojang uses trailing Z for UTC, Python needs +00:00
-    dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
-    return dt.strftime(format)
+    try:
+        dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+        return dt.strftime(format)
+    except ValueError:
+        return 'Unknown'
 
 def sanitize_filename(text: str) -> str:
     # Normalize Unicode characters to closest ASCII equivalent

@@ -8,7 +8,7 @@ from textual.containers import Vertical, Horizontal
 from textual.screen import Screen
 from textual.widgets import Button, Static, Footer, Header, Label, DataTable, Input
 
-from screens.modals import DeleteModal, FilterModal, SortModal #, ModBrowserModal
+from screens.modals import DeleteModal, FilterModal, SortModal
 from screens import ModBrowserScreen
 
 from backend.storage import InstanceConfig, ModList
@@ -28,11 +28,15 @@ class ModListScreen(FocusNavigationMixin, Screen):
         Binding('s', "sort", "Sort", show=True),
     ] + FocusNavigationMixin.BINDINGS
 
+    # - make delete, enable/disable and update not show up when focusing datatable
+
     first_load = True
 
     selected_mod: str | None = None
 
     current_sorting: Literal['Name', 'Reverse-Name', 'Date', 'Reverse-Date'] = 'Name'
+
+    filtered_data: list[dict] = []
 
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()
@@ -165,8 +169,10 @@ class ModListScreen(FocusNavigationMixin, Screen):
     def action_enable_disable(self):
         if self.selected_mod:
             self.modlist.toggle_mod(self.selected_mod, self.instance.path)
-            # - need to reload table while keeping filters and sorting
-            self.load_table()
+            self.load_table(self.filtered_data) # reapply filters
+            self.sort_table(self.current_sorting) # reapply sorting
+            query = self.query_one('#modlist-search', SmartInput).value
+            self.search_table(query) # reapply search
     
     # - implement update mod
     def action_update(self): # update currently selected mod
@@ -195,6 +201,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
             self.modlist.save(self.instance.path / "mods")
             self.load_table()
     
+    # - switch to using filter sidebar
     def filter_table(self):
         """Open Filter Modal."""
         def filter_chosen(filter: dict | None) -> None:
@@ -208,15 +215,15 @@ class ModListScreen(FocusNavigationMixin, Screen):
                 self.filter_label.update(f'Filter: {formatted_filters}')
                 self.table.clear()
 
-                filtered_data = [
+                self.filtered_data = [
                     row for row in self.modlist.to_dict()
                     if all(
                         any(val in row[col] if isinstance(row[col], list) else val == row[col] for val in values)
                         for col, values in filter.items()
                     )
                 ]
-
-                self.load_table(filtered_data)
+                # - doesn't respect search filtering
+                self.load_table(self.filtered_data)
             else:
                 self.filter_label.update('')
                 self.table.clear()
@@ -267,6 +274,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
             return
         query = sanitize_filename(query)
         data = self.modlist.to_dict(f'{DATE_FORMAT} {TIME_FORMAT}')
+        # - doesn't respect filtering
         filtered_data: list[dict] = [
             row for row in data
             if sanitize_filename(str(row.get("name", ""))).startswith(query)

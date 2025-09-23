@@ -1,6 +1,7 @@
 from typing import Callable
 
 from textual.css.query import NoMatches
+from textual.message import Message
 from textual.widgets import Collapsible, SelectionList
 
 from helpers import CustomVerticalScroll, CustomSelectionList
@@ -24,12 +25,23 @@ class FilterSidebar(CustomVerticalScroll):
     }
     """
 
+    class FilterChanged(Message):
+        """Posted when a filter changes."""
+        def __init__(self, sender: "FilterSidebar", event: SelectionList.SelectedChanged) -> None:
+            super().__init__()
+            self.sender = sender
+            self.filter = event.selection_list.id
+            self.selected = event.selection_list.selected
+
+    def on_selection_list_selected_changed(self, event: SelectionList.SelectedChanged) -> None:
+        self.post_message(self.FilterChanged(self, event))
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._categories: dict[str, Collapsible] = {}
         self._default_filters: dict[str, list[str]] = {}
 
-    def add_category(self, name: str, collapsed: bool = True, wait_for_refresh_cb: Callable | None = None) -> bool:
+    def add_category(self, name: str, filter_name: str | None = None,collapsed: bool = True, wait_for_refresh_cb: Callable | None = None) -> bool:
         """
             Add a new filter category with no options yet.
             Returns:
@@ -40,7 +52,7 @@ class FilterSidebar(CustomVerticalScroll):
         if name.lower() in self._categories:
             return False
         
-        selection_list = CustomSelectionList(compact=True, classes=f"{' '.join(self.classes)} selectionlist focusable")
+        selection_list = CustomSelectionList(compact=True, id=filter_name or name, classes=f"{' '.join(self.classes)} selectionlist focusable")
         collapsible = Collapsible(
             selection_list,
             title=name.title(),
@@ -54,10 +66,12 @@ class FilterSidebar(CustomVerticalScroll):
             return self.call_after_refresh(lambda: wait_for_refresh_cb(collapsible))
         return True
 
-    def add_categories(self, categories: list[str]) -> bool:
+    def add_categories(self, categories: list[tuple[str, str] | str]) -> bool:
         """Add multiple categories."""
         for category in categories:
-            if not self.add_category(category):
+            display = category[0] if isinstance(category, tuple) else category
+            ret_val = category[1] if isinstance(category, tuple) else category
+            if not self.add_category(display, ret_val):
                 return False
         return True
 

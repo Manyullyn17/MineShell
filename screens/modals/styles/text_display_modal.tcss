@@ -6,6 +6,7 @@ ModalScreen {
     grid-size: 1 2;
     grid-rows: 1fr 3;
     grid-columns: 1fr;
+    grid-gutter: 1 0;
     padding: 0 1;
     border: panel $accent-lighten-1 80%;
     background: $surface;

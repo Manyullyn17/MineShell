@@ -149,10 +149,12 @@ class ModBrowserScreen(FocusNavigationMixin, Screen):
         else:
             self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
 
+    @on(FilterSidebar.FilterChanged)
+    def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
+        self.search_mods()
+
     @on(ModList.Selected)
     async def on_mod_list_selected(self, event: ModList.Selected) -> None:
         selected_mod = event.item
         self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or '', self.instance))
-
-# - inspired by modrinth modbrowser
 

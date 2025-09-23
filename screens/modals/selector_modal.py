@@ -101,6 +101,7 @@ class SelectorModal(CustomModal[str | tuple[str, list[dict[str, str | list[str]]
         yield self.table
 
     def on_mount(self) -> None:
+        self.table.focus()
         if self.choices_fn:
             self.load_choices_from_fn()
 
@@ -140,6 +141,7 @@ class SelectorModal(CustomModal[str | tuple[str, list[dict[str, str | list[str]]
 
         self._populate_table(self.choices)
         self.table.loading = False
+        self.table.focus()
 
     @on(DataTable.RowSelected)
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:

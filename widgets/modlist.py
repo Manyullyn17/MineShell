@@ -78,7 +78,7 @@ class ModCard(Card):
     def __init__(self, mod: dict | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.item = mod or {}
-        self.classes = "modcard"
+        self.classes = f"{' '.join(self.classes)} modcard"
 
     def compose(self):
         with Horizontal(classes="modcard header"):
