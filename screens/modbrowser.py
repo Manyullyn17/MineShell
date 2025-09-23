@@ -6,7 +6,6 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import  VerticalGroup, HorizontalGroup
 from textual.screen import Screen
-from textual.timer import Timer
 from textual.widgets import Header, Footer, Static, Button
 
 from backend.api import get_minecraft_versions, SourceAPI, ModrinthAPI, CurseforgeAPI
@@ -14,16 +13,16 @@ from backend.storage import InstanceConfig
 
 from screens import ModDetailScreen
 
-from helpers import SmartInput, CustomSelect, ModloaderType, FocusNavigationMixin, DebounceMixin
+from helpers import CustomInput, CustomSelect, ModloaderType, NavigationMixin, DebounceMixin
 from widgets import FilterSidebar, ModList
 
-class ModBrowserScreen(FocusNavigationMixin, DebounceMixin, Screen):
+class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
     CSS_PATH = 'styles/modbrowser_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
         Binding('escape', "back", "Back", show=False),
         Binding('r', 'reset', 'Reset', show=True),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     sources = {
         "modrinth": {
@@ -60,7 +59,7 @@ class ModBrowserScreen(FocusNavigationMixin, DebounceMixin, Screen):
 
             # top toolbar
             with HorizontalGroup(id='modbrowser-top-bar', classes='modbrowser top-bar'):
-                self.input = SmartInput(placeholder='Search Mods...', id='modbrowser-search', classes='modbrowser input focusable')
+                self.input = CustomInput(placeholder='Search Mods...', id='modbrowser-search', classes='modbrowser input focusable')
                 yield self.input
                 yield Static('Source:', id='modbrowser-source-label' ,classes='modbrowser text')
                 self.source_select = CustomSelect([(key.capitalize(), key) for key in self.sources], allow_blank=False, id='modbrowser-source-select', classes='modbrowser select focusable')
@@ -127,8 +126,8 @@ class ModBrowserScreen(FocusNavigationMixin, DebounceMixin, Screen):
                 self.notify(notify, severity='information', timeout=5)
             self.search_mods()
 
-    @on(SmartInput.Changed, '#modbrowser-search')
-    def on_input_changed(self, event: SmartInput.Changed) -> None:
+    @on(CustomInput.Changed, '#modbrowser-search')
+    def on_input_changed(self, event: CustomInput.Changed) -> None:
         self.debounce('search', 0.5, self.search_mods)
 
     @work(thread=True)

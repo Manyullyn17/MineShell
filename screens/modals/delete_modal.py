@@ -3,14 +3,14 @@ from textual.binding import Binding
 from textual.containers import Grid
 from textual.widgets import Button, Label
 
-from helpers import CustomModal, FocusNavigationMixin
+from helpers import CustomModal, NavigationMixin
 
-class DeleteModal(FocusNavigationMixin,CustomModal[bool]):
+class DeleteModal(NavigationMixin,CustomModal[bool]):
     CSS_PATH = 'styles/delete_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'back', show=False)
-        ] + FocusNavigationMixin.BINDINGS
+        ] + NavigationMixin.BINDINGS
     
     def __init__(self, title: str='Delete Instance?'):
         super().__init__()

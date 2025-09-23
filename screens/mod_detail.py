@@ -3,7 +3,6 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-# from textual.timer import Timer
 from textual.widgets import Header, Footer, Label, TabbedContent, TabPane, Static, Button
 from rich.markdown import Markdown
 
@@ -13,15 +12,15 @@ from backend.storage import InstanceConfig
 
 from screens.modals import TextDisplayModal
 
-from helpers import FocusNavigationMixin, strip_images, CustomVerticalScroll, DebounceMixin
+from helpers import NavigationMixin, strip_images, CustomVerticalScroll, DebounceMixin
 from widgets import FilterSidebar, VersionList
 
-class ModDetailScreen(FocusNavigationMixin, DebounceMixin, Screen):
+class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
     CSS_PATH = 'styles/mod_detail_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
         Binding('escape', "back", "Back", show=False),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     sources = {
         "modrinth": ModrinthAPI(),

@@ -16,15 +16,15 @@ from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI, FTBAPI
 from backend.api import get_minecraft_versions, get_fabric_versions, get_forge_versions, get_neoforge_versions, get_quilt_versions
 
 from backend.storage import InstanceConfig
-from helpers import format_date, sanitize_filename, ModloaderType, CustomSelect, SmartInput, FocusNavigationMixin
+from helpers import format_date, sanitize_filename, ModloaderType, CustomSelect, CustomInput, NavigationMixin
 
-class NewInstanceScreen(FocusNavigationMixin, Screen):
+class NewInstanceScreen(NavigationMixin, Screen):
     CSS_PATH = 'styles/new_instance_screen.tcss'
     BINDINGS = [
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('i', 'install', 'Install'),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     sources = {
         "Modrinth": {
@@ -89,7 +89,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
             
             # Project / Instance fields for Modpacks
             yield Static('Project:', classes='text modpack')
-            self.search = SmartInput(placeholder='Search Modpack', id='project_input', classes='focusable input modpack')
+            self.search = CustomInput(placeholder='Search Modpack', id='project_input', classes='focusable input modpack')
             yield self.search
             yield Button('Search', id='search_button', classes='focusable button modpack')
 
@@ -104,7 +104,7 @@ class NewInstanceScreen(FocusNavigationMixin, Screen):
 
             # Shared Fields
             yield Static('Instance Name:', classes='text')
-            self.instance_name = SmartInput(placeholder='Instance Name', id='instance_name_input', classes='focusable input')
+            self.instance_name = CustomInput(placeholder='Instance Name', id='instance_name_input', classes='focusable input')
             yield self.instance_name
             # Shared Fields end
 

@@ -3,15 +3,15 @@ from textual.binding import Binding
 from textual.containers import Grid
 from textual.widgets import Button, Static, Checkbox
 
-from helpers import CustomSelect, CustomModal, FocusNavigationMixin
+from helpers import CustomSelect, CustomModal, NavigationMixin
 
-class SortModal(FocusNavigationMixin, CustomModal[tuple[str, bool]]):
+class SortModal(NavigationMixin, CustomModal[tuple[str, bool]]):
     """A reusable modal to select values to sort by."""
     CSS_PATH = 'styles/sort_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'esc', show=False),
-        ] + FocusNavigationMixin.BINDINGS
+        ] + NavigationMixin.BINDINGS
 
     def __init__(self, sortable_columns:list[str]):
         super().__init__()

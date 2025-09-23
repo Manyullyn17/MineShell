@@ -2,40 +2,47 @@ from typing import TYPE_CHECKING
 import importlib
 
 __all__ = [
-    "CustomSelect",
-    "SmartInput",
-    "CustomTable",
+    "CustomInput",
     "CustomModal",
-    "format_date",
-    "sanitize_filename",
-    "download_file",
-    "ModloaderType",
-    "FocusNavigationMixin",
-    "CustomVerticalScroll",
+    "CustomSelect",
     "CustomSelectionList",
-    "strip_images",
+    "CustomTable",
+    "CustomVerticalScroll",
     "DebounceMixin",
+    "NavigationMixin",
+    "download_file",
+    "format_date",
+    "ModloaderType",
+    "sanitize_filename",
+    "strip_images",
 ]
 
 if TYPE_CHECKING:
-    from .widgets import CustomSelect, SmartInput, CustomTable, CustomModal, FocusNavigationMixin, CustomVerticalScroll, CustomSelectionList, DebounceMixin
+    from .custominput import CustomInput
+    from .custommodal import CustomModal
+    from .customselect import CustomSelect
+    from .customselectionlist import CustomSelectionList
+    from .customtable import CustomTable
+    from .customverticalscroll import CustomVerticalScroll
+    from .debouncemixin import DebounceMixin
+    from .navigationmixin import NavigationMixin
     from .utils import format_date, sanitize_filename, download_file, ModloaderType, strip_images
 
 # Map attribute names to their modules
 _lazy_map = {
-    "CustomSelect": ".widgets",
-    "SmartInput": ".widgets",
-    "CustomTable": ".widgets",
-    "CustomModal": ".widgets",
+    "CustomInput": ".custominput",
+    "CustomModal": ".custommodal",
+    "CustomSelect": ".customselect",
+    "CustomSelectionList": ".customselectionlist",
+    "CustomTable": ".customtable",
+    "CustomVerticalScroll": ".customverticalscroll",
+    "DebounceMixin": ".debouncemixin",
+    "NavigationMixin": ".navigationmixin",
     "format_date": ".utils",
     "sanitize_filename": ".utils",
     "download_file": ".utils",
     "ModloaderType": ".utils",
-    "FocusNavigationMixin": ".widgets",
-    "CustomVerticalScroll": ".widgets",
-    "CustomSelectionList": ".widgets",
     "strip_images": ".utils",
-    "DebounceMixin": ".widgets",
 }
 
 def __getattr__(name: str):

@@ -12,10 +12,10 @@ from screens.modals import DeleteModal, FilterModal, SortModal
 from screens import ModBrowserScreen
 
 from backend.storage import InstanceConfig, ModList
-from helpers import SmartInput, CustomTable, sanitize_filename, FocusNavigationMixin
+from helpers import CustomInput, CustomTable, sanitize_filename, NavigationMixin
 from config import DATE_FORMAT, TIME_FORMAT
 
-class ModListScreen(FocusNavigationMixin, Screen):
+class ModListScreen(NavigationMixin, Screen):
     CSS_PATH = 'styles/mod_list_screen.tcss'
     BINDINGS = [
         Binding('q', "back", "Back", show=True),
@@ -26,7 +26,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
         Binding('a', "add_mods", "Add Mods", show=True),
         Binding('f', "filter", "Filter", show=True),
         Binding('s', "sort", "Sort", show=True),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     # - make delete, enable/disable and update not show up when focusing datatable
 
@@ -63,7 +63,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
                 yield self.mod_count
 
             with Horizontal(id='modlist-buttons'):
-                yield SmartInput(placeholder='Search Modlist', id='modlist-search', classes='focusable modlist search')
+                yield CustomInput(placeholder='Search Modlist', id='modlist-search', classes='focusable modlist search')
                 yield Button('Filter', id='modlist-filter-button', classes='focusable modlist button')
                 yield Button('Sort', id='modlist-sort-button', classes='focusable modlist button') # sort by name and install date, normal and reverse
                 yield Button('Update', id='modlist-update-button', classes='focusable modlist button')
@@ -171,7 +171,7 @@ class ModListScreen(FocusNavigationMixin, Screen):
             self.modlist.toggle_mod(self.selected_mod, self.instance.path)
             self.load_table(self.filtered_data) # reapply filters
             self.sort_table(self.current_sorting) # reapply sorting
-            query = self.query_one('#modlist-search', SmartInput).value
+            query = self.query_one('#modlist-search', CustomInput).value
             self.search_table(query) # reapply search
     
     # - implement update mod

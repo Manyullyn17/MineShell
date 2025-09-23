@@ -3,14 +3,14 @@ from textual.binding import Binding
 from textual.containers import Grid, Container
 from textual.widgets import Label, Static, Button, Link
 
-from helpers import CustomModal, FocusNavigationMixin
+from helpers import CustomModal, NavigationMixin
 
-class FolderModal(FocusNavigationMixin, CustomModal):
+class FolderModal(NavigationMixin, CustomModal):
     CSS_PATH = 'styles/folder_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'back', show=False),
-        ] + FocusNavigationMixin.BINDINGS
+        ] + NavigationMixin.BINDINGS
 
     def __init__(self, instance_name: str, folder_path: str, ftp_link: str):
         super().__init__()

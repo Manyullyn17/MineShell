@@ -13,9 +13,9 @@ from screens import InstanceDetailScreen, NewInstanceScreen
 from screens.modals import DeleteModal, OptionModal
 
 from backend.storage import InstanceRegistry
-from helpers import CustomTable, FocusNavigationMixin
+from helpers import CustomTable, NavigationMixin
 
-class ManageInstancesScreen(FocusNavigationMixin, Screen):
+class ManageInstancesScreen(NavigationMixin, Screen):
     CSS_PATH = 'styles/manage_instances_screen.tcss'
     BINDINGS = [
         ('q', 'back', 'Back'),
@@ -23,7 +23,7 @@ class ManageInstancesScreen(FocusNavigationMixin, Screen):
         ('n', 'new_instance', 'New Instance'),
         ('d', 'default_instance', 'Set Default Instance'),
         ('delete', 'delete', 'Delete'),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     selected_instance: str | None = None # instance_id
 

@@ -12,16 +12,16 @@ from screens import ModListScreen
 from screens.modals import FolderModal
 
 from backend.storage import InstanceRegistry, InstanceConfig
-from helpers import FocusNavigationMixin
+from helpers import NavigationMixin
 
-class InstanceDetailScreen(FocusNavigationMixin, Screen):
+class InstanceDetailScreen(NavigationMixin, Screen):
     CSS_PATH = 'styles/instance_detail_screen.tcss'
     BINDINGS = [
         ('q', 'back', 'Back'),
         Binding('escape', 'back', show=False),
         ('s', 'start_stop', 'Start/Stop'),
         ('r', 'restart', 'Restart'),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     def __init__(self, instance: InstanceConfig) -> None:
         super().__init__()

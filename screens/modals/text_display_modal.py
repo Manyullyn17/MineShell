@@ -5,9 +5,9 @@ from textual.events import Resize
 from textual.widgets import Button, Static
 from rich.markdown import Markdown
 
-from helpers import CustomModal, FocusNavigationMixin, CustomVerticalScroll
+from helpers import CustomModal, NavigationMixin, CustomVerticalScroll
 
-class TextDisplayModal(FocusNavigationMixin, CustomModal[str | None]):
+class TextDisplayModal(NavigationMixin, CustomModal[str | None]):
     """General-purpose scrollable text modal.
 
     Args:
@@ -21,7 +21,7 @@ class TextDisplayModal(FocusNavigationMixin, CustomModal[str | None]):
     BINDINGS = [
         ("q", "back", "Back"),
         Binding('escape', 'back', show=False),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     def __init__(self, title: str, text: str, fixed_width: int = 0, fixed_height: int = 0, markdown: bool = True) -> None:
         super().__init__()

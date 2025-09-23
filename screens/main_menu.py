@@ -7,13 +7,13 @@ from textual.widgets import Button, Static, Footer, Header
 
 from screens import InstanceDetailScreen, ManageInstancesScreen
 from backend.storage import InstanceRegistry
-from helpers import FocusNavigationMixin
+from helpers import NavigationMixin
 
-class MainMenu(FocusNavigationMixin, Screen):
+class MainMenu(NavigationMixin, Screen):
     CSS_PATH = 'styles/main_screen.tcss'
     BINDINGS = [
         ('crtl+q', 'quit', 'Quit'),
-    ] + FocusNavigationMixin.BINDINGS
+    ] + NavigationMixin.BINDINGS
 
     def compose(self) -> ComposeResult:
         self.instance_name = ''

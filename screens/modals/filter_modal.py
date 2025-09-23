@@ -7,16 +7,16 @@ from textual.containers import Grid
 from textual.events import Resize
 from textual.widgets import Label, Button, Collapsible, Static
 
-from helpers import CustomModal, FocusNavigationMixin, CustomSelectionList as SelectionList
+from helpers import CustomModal, NavigationMixin, CustomSelectionList as SelectionList
 
-class FilterModal(FocusNavigationMixin, CustomModal[dict]):
+class FilterModal(NavigationMixin, CustomModal[dict]):
     """A reusable modal to select values to filter by."""
     CSS_PATH = 'styles/filter_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'esc', show=False),
             Binding('r', "reset", show=False),
-        ] + FocusNavigationMixin.BINDINGS
+        ] + NavigationMixin.BINDINGS
 
     first_open = True
 
