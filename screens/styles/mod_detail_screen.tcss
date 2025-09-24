@@ -36,3 +36,8 @@ TabbedContent {
     }
 }
 
+VersionCard {
+    .button {
+        width: 17;
+    }
+}

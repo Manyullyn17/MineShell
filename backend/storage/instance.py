@@ -182,6 +182,8 @@ class InstanceConfig(BaseModel):
     modpack_source: Literal['modrinth', 'curseforge', 'ftb', 'modloader'] = 'modloader' # None if modloader only
     # - need to set source when creating instance, what do for modloader only instances? default modrinth and be able to set in settings?
     source_api: Literal['modrinth', 'curseforge'] = 'modrinth'
+    running: bool = False
+    stopping: bool = False
     jvm_args: List[str] = []
     java_version: Optional[str] = None
     memory_min: Optional[int] = None

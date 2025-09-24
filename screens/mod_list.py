@@ -12,7 +12,7 @@ from screens.modals import DeleteModal, FilterModal, SortModal
 from screens import ModBrowserScreen
 
 from backend.storage import InstanceConfig, ModList
-from helpers import CustomInput, CustomTable, sanitize_filename, NavigationMixin
+from helpers import CustomInput, CustomTable, sanitize_filename, NavigationMixin, filter_data
 from config import DATE_FORMAT, TIME_FORMAT
 
 class ModListScreen(NavigationMixin, Screen):
@@ -215,13 +215,8 @@ class ModListScreen(NavigationMixin, Screen):
                 self.filter_label.update(f'Filter: {formatted_filters}')
                 self.table.clear()
 
-                self.filtered_data = [
-                    row for row in self.modlist.to_dict()
-                    if all(
-                        any(val in row[col] if isinstance(row[col], list) else val == row[col] for val in values)
-                        for col, values in filter.items()
-                    )
-                ]
+                self.filtered_data = filter_data(self.modlist.to_dict(), filter)
+
                 # - doesn't respect search filtering
                 self.load_table(self.filtered_data)
             else:

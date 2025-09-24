@@ -7,7 +7,7 @@ MODLOADERS = {"fabric", "forge", "quilt", "neoforge"}
 USER_AGENT = "manyullyn/mineshell/0.1.0 (https://github.com/manyullyn)"
 HEADERS={"User-Agent": USER_AGENT}
 
-@cached(ttl=600, key_builder=lambda f, endpoint, params: (endpoint, tuple(sorted(params.items()))))
+@cached(ttl=600, key_builder=lambda f, endpoint, params: (endpoint, tuple(sorted(params.items()))), skip_cache_func=lambda r: r is None or r == {})
 async def cached_request(endpoint: str, params: dict):
     # convert dict to tuple for hashable cache key
     return await _modrinth_request(endpoint, params)
@@ -24,7 +24,7 @@ async def _modrinth_request(endpoint: str, params: dict) -> dict:
             )
             resp.raise_for_status()
             return resp.json()
-    except (httpx.ReadTimeout, httpx.TimeoutException):
+    except (httpx.ReadTimeout, httpx.TimeoutException, httpx.HTTPStatusError):
         return {}
 
 class ModrinthAPI(SourceAPI):
@@ -37,7 +37,7 @@ class ModrinthAPI(SourceAPI):
                 "limit": limit
             }
             results: list[dict] = (await cached_request("search", params))["hits"]
-        except (httpx.ReadTimeout, httpx.TimeoutException):
+        except KeyError:
             return '', []
 
         # Build rows for the modal: [project_id, title, slug, downloads, client/server]
@@ -81,10 +81,7 @@ class ModrinthAPI(SourceAPI):
         Each item is [version_name, date_published].
         Sorted newest first.
         """
-        try:
-            versions: list[dict] = await cached_request(f"project/{modpack_id}/version", {})
-        except (httpx.ReadTimeout, httpx.TimeoutException):
-            return []
+        versions: list[dict] = await cached_request(f"project/{modpack_id}/version", {})
         # Sort newest first
         versions.sort(key=lambda v: v["date_published"], reverse=True)
 
@@ -146,39 +143,37 @@ class ModrinthAPI(SourceAPI):
     async def search_mods(self, query: str, limit: int=20, filters: dict | None = None) -> list[dict[str, str | list[str]]]:
         """Search mods on Modrinth and return data for the selector modal."""
         try:
-            async with httpx.AsyncClient() as client:
-                facets = [
-                    ["server_side:required", "server_side:optional", "server_side:unknown"]
-                ]
+            facets = [
+                ["server_side:required", "server_side:optional", "server_side:unknown"]
+            ]
 
-                if filters:
-                    project_types = [pt.lower() for pt in filters.get('type', ['mod', 'datapack'])]
-                    facets.append([f"project_type:{pt}" for pt in project_types])
+            if filters:
+                project_types = [pt.lower() for pt in filters.get('type', ['mod', 'datapack'])]
+                facets.append([f"project_type:{pt}" for pt in project_types])
 
-                    if 'version' in filters:
-                        facets.append([f"versions:{v}" for v in filters['version']])
+                if 'version' in filters:
+                    facets.append([f"versions:{v}" for v in filters['version']])
 
-                    # This handles the logic for "(mod AND modloader) OR datapack".
-                    # By adding 'categories:datapack' to the modloader filter group, we ensure that
-                    # projects can match if they are either a mod with the correct modloader OR a datapack.
-                    if 'modloader' in filters:
-                        modloader_facets = [f"categories:{v}" for v in filters['modloader']] if project_types != ['datapack'] else []
-                        if 'datapack' in project_types:
-                            modloader_facets.append("categories:datapack")
-                        facets.append(modloader_facets)
+                # This handles the logic for "(mod AND modloader) OR datapack".
+                # By adding 'categories:datapack' to the modloader filter group, we ensure that
+                # projects can match if they are either a mod with the correct modloader OR a datapack.
+                if 'modloader' in filters:
+                    modloader_facets = [f"categories:{v}" for v in filters['modloader']] if project_types != ['datapack'] else []
+                    if 'datapack' in project_types:
+                        modloader_facets.append("categories:datapack")
+                    facets.append(modloader_facets)
 
-                    if 'category' in filters:
-                        facets.append([f"categories:{v}" for v in filters['category']])
+                if 'category' in filters:
+                    facets.append([f"categories:{v}" for v in filters['category']])
 
+            params = {
+                "query": query,
+                "facets": json.dumps(facets),
+                "limit": limit,
+            }
 
-                params = {
-                    "query": query,
-                    "facets": json.dumps(facets),
-                    "limit": limit,
-                }
-
-                results: list[dict] = (await cached_request("search", params))["hits"]
-        except (httpx.ReadTimeout, httpx.TimeoutException):
+            results: list[dict] = (await cached_request("search", params))["hits"]
+        except KeyError:
             return []
 
         # Build rows for the modal: [project_id, title, slug, downloads, client/server]
@@ -223,21 +218,19 @@ class ModrinthAPI(SourceAPI):
         
         return project
 
-    async def get_mod_versions(self, project_id: str, mc_version: str | None = None, modloader: str | None = None) -> list[dict]:
+    async def get_mod_versions(self, project_id: str, mc_version: list[str] | None = None, modloader: list[str] | None = None) -> list[dict]:
         """
         Returns a list of versions for a given Modrinth project ID.
         Sorted newest first.
         """
-        try:
-            params = {}
-            if mc_version:
-                params['game_version'] = f'["{mc_version}"]'
-            if modloader:
-                params['loader'] = f'["{modloader}"]'
+        params = {}
+        if mc_version:
+            params['game_versions'] = json.dumps(mc_version)
+        if modloader:
+            params['loaders'] = json.dumps(modloader)
 
-            versions: list[dict] = await cached_request(f"project/{project_id}/version", params)
-        except (httpx.ReadTimeout, httpx.TimeoutException):
-            return []
+        versions: list[dict] = await cached_request(f"project/{project_id}/version", params)
+
         # Sort newest first
         versions.sort(key=lambda v: v["date_published"], reverse=True)
 
@@ -257,13 +250,10 @@ class ModrinthAPI(SourceAPI):
         if not project_ids:
             return {}
 
-        try:
-            params = {
-                "ids": json.dumps(project_ids),
-            }
-            projects_list: list[dict] = await cached_request("projects", params)
-        except (httpx.ReadTimeout, httpx.TimeoutException):
-            return {}
+        params = {
+            "ids": json.dumps(project_ids),
+        }
+        projects_list: list[dict] = await cached_request("projects", params)
         
         projects_dict = {proj["id"]: proj for proj in projects_list}
 
@@ -290,27 +280,21 @@ class ModrinthAPI(SourceAPI):
         if not version_ids:
             return []
 
-        try:
-            params = {
-                "ids": json.dumps(version_ids),
-            }
-            versions_list: list[dict] = await cached_request("versions", params)
-        except (httpx.ReadTimeout, httpx.TimeoutException):
-            return []
+        params = {
+            "ids": json.dumps(version_ids),
+        }
+        versions_list: list[dict] = await cached_request("versions", params)
 
         return versions_list
 
     async def get_categories(self) -> list[str]:
         """Get a list of mod categories from Modrinth."""
-        try:
-            raw_categories = await cached_request("tag/category", {})
+        raw_categories = await cached_request("tag/category", {})
 
-            categories: list[str] = [
-                cat.get("name")
-                for cat in raw_categories
-                if cat.get("project_type") in ("mod", "datapack")
-            ]
-        except (httpx.ReadTimeout, httpx.TimeoutException):
-            return []
-        
+        categories: list[str] = [
+            cat.get("name")
+            for cat in raw_categories
+            if cat.get("project_type") in ("mod", "datapack")
+        ]
+    
         return categories

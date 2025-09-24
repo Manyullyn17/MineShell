@@ -7,7 +7,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.events import MouseDown, ScreenResume, Key
 from textual.screen import Screen
-from textual.widgets import Button, DataTable, Footer, Header
+from textual.widgets import Button, Footer, Header
 
 from screens import InstanceDetailScreen, NewInstanceScreen
 from screens.modals import DeleteModal, OptionModal
@@ -121,13 +121,13 @@ class ManageInstancesScreen(NavigationMixin, Screen):
                     self.open_instance(instance_id)
                 self.app.push_screen(NewInstanceScreen(), instance_created)
 
-    @on(DataTable.RowHighlighted)
-    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+    @on(CustomTable.RowHighlighted)
+    def on_data_table_row_highlighted(self, event: CustomTable.RowHighlighted) -> None:
         self.selected_instance = str(event.row_key.value)
         self.refresh_bindings()
 
-    @on(DataTable.RowSelected)
-    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+    @on(CustomTable.RowSelected)
+    def on_data_table_row_selected(self, event: CustomTable.RowSelected) -> None:
         match self.mouse_button:
             case 1: # left click
                 selected_instance = str(event.row_key.value)
@@ -223,3 +223,4 @@ class ManageInstancesScreen(NavigationMixin, Screen):
             return False
         return True
     
+# - add table sorting (on creation date, modloader, mc version, status, alphabetical), default is always first

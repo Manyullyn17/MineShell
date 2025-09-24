@@ -31,7 +31,7 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
         },
         "curseforge": {
             "api": CurseforgeAPI(),
-            # - remove once it's implemented
+            # - remove when implemented
             "notify": "Curseforge support is not yet implemented.",
         },
     }
@@ -47,6 +47,7 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
         self.mc_version = instance.minecraft_version
         self.source = instance.source_api
         self.source_api: SourceAPI = self.sources[self.source]['api']
+        self.filters = {'modloader': [self.modloader], 'version': [self.mc_version]}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -79,7 +80,7 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
 
         self.input.focus()
 
-        self.search_mods(first_load=True)
+        self.debounce('searchs', 0.1, lambda: self.search_mods(), self.filters)
 
         self.filter_sidebar.add_categories(['modloader', 'version', 'type', 'category'])
 
@@ -92,7 +93,7 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
         self.call_later(self.filter_sidebar.add_options, 'modloader', modloaders, [self.modloader])
 
         types = ['mod', 'datapack']
-        self.call_later(self.filter_sidebar.add_options, 'type', types, types)
+        self.call_later(self.filter_sidebar.add_options, 'type', types)
 
         mc_versions, categories = await asyncio.gather(get_minecraft_versions(), self.source_api.get_categories())
         
@@ -130,28 +131,23 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
     def on_input_changed(self, event: CustomInput.Changed) -> None:
         self.debounce('search', 0.5, self.search_mods)
 
+    @on(FilterSidebar.FilterChanged)
+    def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
+        if event.filter:
+            self.filters[event.filter] = list(event.selected)
+            self.debounce('search', 0.5, self.search_mods, self.filters)
+
     @work(thread=True)
-    async def search_mods(self, first_load: bool = False):
+    async def search_mods(self):
         """Search mods on the selected source."""
         self.call_later(lambda: setattr(self.modlist, 'custom_loading', True))
         query = self.input.value
-        if first_load:
-            filters = {
-                'modloader': [self.modloader],
-                'version': [self.mc_version],
-            }
-        else:
-            filters = self.filter_sidebar.get_selected_filters()
 
-        data = await self.source_api.search_mods(query, filters=filters)
+        data = await self.source_api.search_mods(query, filters=self.filters)
         if data:
             self.call_later(self.modlist.set_mods, data)
         else:
             self.notify(f"Couldn't load Mods. Query: '{query}'", severity='error', timeout=5)
-
-    @on(FilterSidebar.FilterChanged)
-    def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
-        self.debounce('search', 0.5, self.search_mods)
 
     @on(ModList.Selected)
     async def on_mod_list_selected(self, event: ModList.Selected) -> None:

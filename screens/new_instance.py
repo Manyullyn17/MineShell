@@ -37,12 +37,14 @@ class NewInstanceScreen(NavigationMixin, Screen):
             "key": "curseforge",
             "api": CurseforgeAPI(),
             "install_mode": "modpack",
+            # - remove when implemented
             "notify": "Curseforge support is not yet implemented.",
         },
         "FTB": {
             "key": "ftb",
             "api": FTBAPI(),
             "install_mode": "modpack",
+            # - remove when implemented
             "notify": "FTB support is not yet implemented.",
         },
         "Modloader only": {

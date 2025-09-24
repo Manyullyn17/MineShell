@@ -1,3 +1,5 @@
+from packaging.version import Version
+
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Static, Button
@@ -22,6 +24,7 @@ class VersionCard(Card):
         .button {
             background: $background-lighten-1;
             margin: 0 1;
+            width: 17;
         }
 
         .header {
@@ -58,6 +61,10 @@ class VersionCard(Card):
                 content-align: left middle;
                 height: 1;
                 width: auto;
+            }
+
+            .tags-container {
+                width: 1fr;
             }
         }
     }
@@ -106,10 +113,9 @@ class VersionCard(Card):
             yield Static(classes='versioncard header spacer')
             yield Static(f"Downloads: {self.item.get('downloads', 0):,}", classes="versioncard header downloads")
         with Horizontal(classes="versioncard tags"):
-            with Vertical():
-                yield Static(", ".join(self.item.get("loaders", [])).title(), classes="versioncard tags loaders")
+            with Vertical(classes='versioncard tags tags-container'):
+                yield Static(", ".join(sorted(self.item.get("loaders", []), key=lambda v: Version(v))).title(), classes="versioncard tags loaders")
                 yield Static(", ".join(self.item.get("game_versions", [])), classes="versioncard tags gameversions")
-            yield Static(classes='versioncard tags spacer')
             yield Button('Changelog', compact=True, id='changelog', classes='versioncard button focusable')
             yield Button('Install', compact=True, id='install', classes='versioncard button focusable')
         self.border_subtitle = self.item.get('version_type', '').title()
@@ -173,8 +179,7 @@ class VersionList(CustomList):
             return True
         
         self.custom_loading = True
-        self.remove_children('.card')
-        self.remove_children('.static-placeholder')
+        self.remove_children('.card, .static-placeholder')
 
         capped = False
         self.cards.clear()

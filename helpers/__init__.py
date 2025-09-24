@@ -15,6 +15,7 @@ __all__ = [
     "ModloaderType",
     "sanitize_filename",
     "strip_images",
+    "filter_data",
 ]
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from .customverticalscroll import CustomVerticalScroll
     from .debouncemixin import DebounceMixin
     from .navigationmixin import NavigationMixin
-    from .utils import format_date, sanitize_filename, download_file, ModloaderType, strip_images
+    from .utils import format_date, sanitize_filename, download_file, ModloaderType, strip_images, filter_data
 
 # Map attribute names to their modules
 _lazy_map = {
@@ -43,6 +44,7 @@ _lazy_map = {
     "download_file": ".utils",
     "ModloaderType": ".utils",
     "strip_images": ".utils",
+    "filter_data": ".utils",
 }
 
 def __getattr__(name: str):

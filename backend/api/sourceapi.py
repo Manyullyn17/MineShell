@@ -22,7 +22,7 @@ class SourceAPI(Protocol):
         """Fetch project info for a given project ID from Modrinth."""
         ...
 
-    async def get_mod_versions(self, project_id: str, mc_version: str | None = None, modloader: str | None = None) -> list[dict]:
+    async def get_mod_versions(self, project_id: str, mc_version: list[str] | None = None, modloader: list[str] | None = None) -> list[dict]:
         """
         Returns a list of versions for a given project ID.
         If no Minecraft version or Modloader is provided returns all versions.

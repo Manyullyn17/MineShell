@@ -7,7 +7,7 @@ from config import DATE_FORMAT
 
 ModloaderType = Literal["fabric", "forge", "neoforge", "quilt"]
 
-def format_date(iso_string: str, format: str=DATE_FORMAT) -> str:
+def format_date(iso_string: str, format: str = DATE_FORMAT) -> str:
     """Convert an ISO8601 datetime string into the global DATE_FORMAT."""
     # Mojang uses trailing Z for UTC, Python needs +00:00
     try:
@@ -50,3 +50,13 @@ def strip_images(text: str) -> str:
     # remove Markdown images ![alt](url)
     text = re.sub(r'!\[.*?\]\(.*?\)', '[image removed]', text)
     return text
+
+def filter_data(data: list[dict[str, str | list]], filters: dict[str, list]) -> list[dict[str, str | list]]:
+    return [
+        row for row in data
+        if all(
+            any(val in row[col] if isinstance(row[col], list) else val == row[col] for val in values)
+            for col, values in filters.items()
+        )
+    ]
+

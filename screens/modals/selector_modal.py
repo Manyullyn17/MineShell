@@ -7,7 +7,7 @@ from textual.binding import Binding
 from textual.widgets import DataTable
 
 from screens.modals import FilterModal
-from helpers import CustomModal
+from helpers import CustomModal, filter_data
 
 class SelectorModal(CustomModal[str | tuple[str, list[dict[str, str | list[str]]]]]):
     """A reusable modal that can show a list of values with optional extra info."""
@@ -164,13 +164,15 @@ class SelectorModal(CustomModal[str | tuple[str, list[dict[str, str | list[str]]
                 self.table.border_title = f'{self.title_txt} (Filter: {formatted_filters})'
                 self.table.clear()
 
-                filtered_data = [
-                    row for row in self.choices
-                    if all(
-                        any(val in row[col] if isinstance(row[col], list) else val == row[col] for val in values)
-                        for col, values in filter.items()
-                    )
-                ]
+                filtered_data = filter_data(self.choices, filter)
+
+                # filtered_data = [
+                #     row for row in self.choices
+                #     if all(
+                #         any(val in row[col] if isinstance(row[col], list) else val == row[col] for val in values)
+                #         for col, values in filter.items()
+                #     )
+                # ]
 
                 self.load_table(filtered_data)
             else:

@@ -5,21 +5,18 @@ Screen {
 #buttons {
     width: auto;
     padding: 1 0;
-    # content-align: left middle;
 }
 
 .mainbutton {
     margin: 0 2 1 2;
     width: 20;
     content-align: left middle;
-    # outline: heavy green;
 }
 
 #instance-info {
     height: 3;
     content-align: center middle;
     padding: 1 0;
-    # outline: heavy green;
 }
 
 #status-grid {

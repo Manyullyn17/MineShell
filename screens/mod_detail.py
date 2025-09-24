@@ -1,9 +1,11 @@
+from typing import get_args
+
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Label, TabbedContent, TabPane, Static, Button
+from textual.widgets import Header, Footer, Label, TabbedContent, TabPane, Static
 from rich.markdown import Markdown
 
 from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI
@@ -12,7 +14,7 @@ from backend.storage import InstanceConfig
 
 from screens.modals import TextDisplayModal
 
-from helpers import NavigationMixin, strip_images, CustomVerticalScroll, DebounceMixin
+from helpers import NavigationMixin, strip_images, CustomVerticalScroll, DebounceMixin, ModloaderType
 from widgets import FilterSidebar, VersionList
 
 class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
@@ -90,8 +92,11 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
 
     @work(thread=True)
     async def get_mod_versions(self):
-        # mod_versions: id, version_number, files[url, filename, primary], dependencies[version_id | None, project_id, dependency_type]
-        mod_versions = await self.source_api.get_mod_versions(str(self.mod.get('project_id')))
+        # - mod_versions: id, version_number, files[url, filename, primary], dependencies[version_id | None, project_id, dependency_type]
+        mod_versions = await self.source_api.get_mod_versions(str(self.mod.get('project_id')), modloader=[loader for loader in get_args(ModloaderType)] + ['datapack'])
+        if not mod_versions:
+            self.notify('Could not load versions.', severity='error', timeout=5)
+            return
 
         modloaders = list({loader for version in mod_versions for loader in version.get('loaders', [])})
 
@@ -108,13 +113,16 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
         possible_types = ["release", "beta", "alpha"]
         types = [t for t in possible_types if any(v.get("version_type") == t for v in mod_versions)]
 
-        self.mod_versions = [v for v in mod_versions for mc in mc_versions if mc in v.get('game_versions', [])]
+        self.mod_versions = [
+            v for v in mod_versions
+            if any(mc in v.get("game_versions", []) for mc in mc_versions)
+        ]
 
         self.filter_sidebar.add_options('modloader', sorted(modloaders), [self.modloader])
         self.filter_sidebar.add_options('version', mc_versions, [self.mc_version])
         self.filter_sidebar.add_options('type', types)
 
-        self.call_later(self.version_list.set_versions, self.mod_versions, self.filters)
+        self.call_later(self.debounce, 'filter', 0.1, lambda: self.version_list.set_versions(self.mod_versions, self.filters), self.filters)
 
     def update_markdown_label(self, label: Label, text):
         label.update(Markdown(text))
@@ -130,12 +138,8 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
     @on(FilterSidebar.FilterChanged)
     def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
         if event.filter:
-            self.debounce('filter', 0.5, lambda: self._set_filters(event))
-
-    def _set_filters(self, event: FilterSidebar.FilterChanged):
-        if event.filter:
             self.filters[event.filter] = list(event.selected)
-            self.version_list.filter_versions(self.filters)
+            self.debounce('filter', 0.5, lambda: self.version_list.filter_versions(self.filters), self.filters)
 
     @on(VersionList.ButtonPressed)
     def on_version_list_button_pressed(self, event: VersionList.ButtonPressed) -> None:
@@ -143,6 +147,10 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
             case 'changelog':
                 self.app.push_screen(TextDisplayModal(f'Changelog - {event.item.get('name', '')}', event.item.get('changelog', '')))
             case 'install':
-                # - add install logic hee
+                # - add install logic here
                 pass
 
+# - datapacks don't work in versions
+# - shows modloaders that aren't supported (spigot, bukkit)
+# - nothing shows up
+# - when clicking somewhere -> out of range error in focus_card

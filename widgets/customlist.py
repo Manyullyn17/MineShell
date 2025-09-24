@@ -49,7 +49,8 @@ class Card(Static):
         background: $surface;
         height: 10;
     }
-        
+    
+    # - switch to focus-within pseudo class?
     Card.selected {
         border: double $accent-lighten-1;
         background: $boost;
@@ -216,6 +217,8 @@ class CustomList(CustomVerticalScroll):
         event.stop()
 
     def focus_card(self, index: int):
+        if index < 0 or index >= len(self.cards):
+            return
         self.cards[index].focus()
 
     def set_cards(self, items: list[dict]):
@@ -244,6 +247,7 @@ class CustomList(CustomVerticalScroll):
         self.post_message(self.ButtonPressed(self, event.button, event.item))
         event.stop()
 
+    # - overrride watch_loading?
     def watch_custom_loading(self, loading: bool) -> None:
         self.scroll_home(animate=False, immediate=True)
         self.disabled = loading

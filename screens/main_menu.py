@@ -15,14 +15,9 @@ class MainMenu(NavigationMixin, Screen):
         ('crtl+q', 'quit', 'Quit'),
     ] + NavigationMixin.BINDINGS
 
-    def compose(self) -> ComposeResult:
-        self.instance_name = ''
-        self.instance_status = ''
-        self.players = ''
-        self.uptime = ''
-        self.cpu = ''
-        self.ram = ''
+    registry: InstanceRegistry
 
+    def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
         with Horizontal():
@@ -33,7 +28,7 @@ class MainMenu(NavigationMixin, Screen):
                 yield Button('Manage Instances', id='manage_instances', classes='focusable mainbutton')
                 yield Button('Settings', id='settings', classes='focusable mainbutton')
 
-            with Vertical():
+            with Vertical(id='info'):
                 self.instance_info = Static(id='instance-info')
                 yield self.instance_info
 
@@ -55,13 +50,18 @@ class MainMenu(NavigationMixin, Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        # - get name and status dynamically
-        self.update_instance_info('Server', True)
+        self.registry = InstanceRegistry.load()
+        self.default_instance = self.registry.get_default_instance()
+        self.update_default_instance()
         self.status_interval = self.set_interval(10, self.update_status)
         self.call_later(self.update_status)
 
     @on(ScreenResume)
     def on_screen_resume(self, event: ScreenSuspend) -> None:
+        if self.default_instance:
+            # reload registry and default instance
+            self.registry = InstanceRegistry.load()
+        self.update_default_instance()
         if self.status_interval is None:
             self.status_interval = self.set_interval(10, self.update_status)
             self.call_later(self.update_status)
@@ -77,21 +77,26 @@ class MainMenu(NavigationMixin, Screen):
             case 'manage_instances':
                 self.app.push_screen(ManageInstancesScreen())
             case 'open_instance':
-                instance = InstanceRegistry().load().get_default_instance()
-                if instance:
-                    self.app.push_screen(InstanceDetailScreen(instance=instance))
+                if self.default_instance:
+                    self.app.push_screen(InstanceDetailScreen(instance=self.default_instance))
                 else:
                     self.notify('No default instance found.', severity='information', timeout=5)
 
-    def update_instance_info(self, instance_name: str, running: bool, stopping: bool=False):
-        self.instance_name = instance_name
-        if running:
-            self.instance_status = '🟢 Running'
-        elif stopping:
-            self.instance_status = '🟠 Stopping'
+    def update_default_instance(self):
+        self.default_instance = self.registry.get_default_instance()
+        self.update_instance_info()
+
+    def update_instance_info(self):
+        if self.default_instance:
+            if self.default_instance.running:
+                instance_status = '🟢 Running'
+            elif self.default_instance.stopping:
+                instance_status = '🟠 Stopping'
+            else:
+                instance_status = '🔴 Stopped'
+            self.instance_info.update(f'Default Instance: {self.default_instance.name} ({instance_status})')
         else:
-            self.instance_status = '🔴 Stopped'
-        self.instance_info.update(f'Default Instance: {self.instance_name} ({self.instance_status})')
+            self.instance_info.update('Default Instance: No Default Instance')
 
     async def update_status(self):
         # - add method of getting info
