@@ -28,12 +28,11 @@ class ModListScreen(NavigationMixin, Screen):
         Binding('a', "add_mods", "Add Mods", show=True),
         Binding('f', "filter", "Filter", show=True),
         Binding('s', "sort", "Sort", show=True),
+        Binding('s', 'reset', 'Reset Filter/Sort', show=True),
     ] + NavigationMixin.BINDINGS
 
     # - add reset filter/sort keybind (also clears search?)
     # - make delete, enable/disable and update not show up when focusing datatable
-
-    first_load = True
 
     selected_mod: str | None = None
 
@@ -84,34 +83,31 @@ class ModListScreen(NavigationMixin, Screen):
 
     def on_mount(self) -> None:
         self.sub_title = self.instance.name + ' - Modlist'
+
+        # Add columns
+        columns = ['Name', 'Version', 'Type', 'Enabled', 'Source', 'Install Date']
+        for col_name in columns:
+            self.table.add_column(col_name, key=col_name.lower().replace(' ', '_'))
+        
+        # Add hidden datetime column for sorting
+        self.table.add_column('datetime', width=0, key='datetime')
+
         self.table.focus()
         self.load_table()
 
     # - reload table on resume
     @work
-    async def load_table(self, data: list[dict[str, str | list[str]]] | None = None):
+    async def load_table(self):
         self.table.loading = True
         self.mod_count.update(f'Mods: {len(self.modlist.mods)}')
         self.table.clear()
-        columns = ['Name', 'Version', 'Type', 'Enabled', 'Source', 'Install Date']
 
-        if self.first_load:
-            # Add columns
-            for col_name in columns:
-                self.table.add_column(col_name, key=col_name.lower().replace(' ', '_'))
-            
-            # Add hidden datetime column for sorting
-            self.table.add_column('datetime', width=0, key='datetime')
-            self.first_load = False
+        # If registry is empty, just show an empty table
+        if not self.modlist.mods:
+            self.table.loading = False
+            return
 
-        if not data:
-
-            # If registry is empty, just show an empty table
-            if not self.modlist.mods:
-                self.table.loading = False
-                return
-
-            data = self.modlist.to_dict(f'{DATE_FORMAT} {TIME_FORMAT}')
+        data = self.modlist.to_dict(f'{DATE_FORMAT} {TIME_FORMAT}')
 
         # Populate rows
         for mod in data:
@@ -136,9 +132,9 @@ class ModListScreen(NavigationMixin, Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         match event.button.id:
             case 'modlist-filter-button':
-                self.filter_table()
+                self.action_filter()
             case 'modlist-sort-button':
-                self.open_sort_modal()
+                self.action_sort()
             case 'modlist-update-button': # different from action_update, opens modal for selection of update all or update modpack, if not a modpack, only confirmation for update all
                 # - implement update all mods
                 pass
@@ -191,6 +187,11 @@ class ModListScreen(NavigationMixin, Screen):
     def action_sort(self):
         self.open_sort_modal()
 
+    def action_reset(self):
+        self.filter = {}
+        self.current_sorting = 'Name'
+        self._filter_table()
+
     def delete_mod(self):
         if self.selected_mod:
             mod = self.modlist.get_mod(self.selected_mod)
@@ -235,7 +236,7 @@ class ModListScreen(NavigationMixin, Screen):
                 self.current_sorting = cast(Literal['Name', 'Reverse-Name', 'Date', 'Reverse-Date'], ('Reverse-' if reverse else '') + column)
                 self.sort_table()
 
-        self.app.push_screen(SortModal(['Name', 'Date']), check_sort)
+        self.app.push_screen(SortModal(['Name', 'Date'], self.current_sorting), check_sort)
 
     def sort_table(self):
         sort_map = {

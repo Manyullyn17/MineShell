@@ -13,16 +13,18 @@ class SortModal(NavigationMixin, CustomModal[tuple[str, bool]]):
             Binding('escape', 'esc', show=False),
         ] + NavigationMixin.BINDINGS
 
-    def __init__(self, sortable_columns:list[str]):
+    def __init__(self, sortable_columns:list[str], default_sorting: str | None = None):
         super().__init__()
         self.sortable_columns = sortable_columns
+        if default_sorting:
+            self.default_sorting, self.default_reverse = default_sorting.split('-', 1)
 
     def compose(self) -> ComposeResult:
         self.grid = Grid(id='sort-grid')
 
         with self.grid:
             yield Static('Column: ', classes='sort text')
-            self.sort_select = CustomSelect.from_values(self.sortable_columns, id='sort-select', classes='focusable sort select', allow_blank=False)
+            self.sort_select = CustomSelect.from_values(self.sortable_columns, value=self.default_sorting, id='sort-select', classes='focusable sort select', allow_blank=False)
             yield self.sort_select
             self.reverse = Checkbox(label='Reverse', id='sort-reverse', classes='focusable sort checkbox')
             yield self.reverse
