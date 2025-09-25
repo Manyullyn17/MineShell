@@ -39,6 +39,7 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
         self.modloader = instance.modloader
         self.mc_version = instance.minecraft_version
         self.filters = {'loaders': [self.modloader], 'game_versions': [self.mc_version]}
+        self.versions_loading = True
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -122,7 +123,11 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
         self.filter_sidebar.add_options('version', mc_versions, [self.mc_version])
         self.filter_sidebar.add_options('type', types)
 
-        self.call_later(self.debounce, 'filter', 0.1, lambda: self.version_list.set_versions(self.mod_versions, self.filters), self.filters)
+        self.call_later(self.set_versions, self.mod_versions, self.filters)
+
+    def set_versions(self, versions: list[dict], filters: dict):
+        self.version_list.set_versions(versions, filters)
+        self.versions_loading = False
 
     def update_markdown_label(self, label: Label, text):
         label.update(Markdown(text))
@@ -137,7 +142,7 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
 
     @on(FilterSidebar.FilterChanged)
     def on_filter_sidebar_filter_changed(self, event: FilterSidebar.FilterChanged) -> None:
-        if event.filter:
+        if event.filter and not self.versions_loading:
             self.filters[event.filter] = list(event.selected)
             self.debounce('filter', 0.5, lambda: self.version_list.filter_versions(self.filters), self.filters)
 
@@ -150,7 +155,3 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
                 # - add install logic here
                 pass
 
-# - datapacks don't work in versions
-# - shows modloaders that aren't supported (spigot, bukkit)
-# - nothing shows up
-# - when clicking somewhere -> out of range error in focus_card

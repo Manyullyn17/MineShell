@@ -21,7 +21,7 @@ class FilterTable(CustomTable):
         self._master_data[row_key] = deepcopy(self._data[row_key])
         return row_key
 
-    def filter_rows(self, filters: dict[str, list], search_term: Optional[str] = None, search_columns: Optional[list[str]] = None):
+    def filter(self, filters: dict[str, list], search_term: Optional[str] = None, search_columns: Optional[list[str]] = None):
         """Rebuild table based on a filter function applied to master rows."""
         """
         Filters the table based on a dict of column -> allowed values (OR within column, AND across columns)
@@ -34,7 +34,7 @@ class FilterTable(CustomTable):
                     return False
             # Search term filter
             if search_term and search_columns:
-                if not any(search_term.lower() in str(row.get(col, "")).lower() for col in search_columns):
+                if not any(search_term.lower() in row.get(col, "").lower() for col in search_columns):
                     return False
             return True
 

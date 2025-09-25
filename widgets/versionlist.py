@@ -114,8 +114,8 @@ class VersionCard(Card):
             yield Static(f"Downloads: {self.item.get('downloads', 0):,}", classes="versioncard header downloads")
         with Horizontal(classes="versioncard tags"):
             with Vertical(classes='versioncard tags tags-container'):
-                yield Static(", ".join(sorted(self.item.get("loaders", []), key=lambda v: Version(v))).title(), classes="versioncard tags loaders")
-                yield Static(", ".join(self.item.get("game_versions", [])), classes="versioncard tags gameversions")
+                yield Static(", ".join(self.item.get("loaders", [])).title(), classes="versioncard tags loaders")
+                yield Static(", ".join(sorted(self.item.get("game_versions", []), key=lambda v: Version(v), reverse=True)), classes="versioncard tags gameversions")
             yield Button('Changelog', compact=True, id='changelog', classes='versioncard button focusable')
             yield Button('Install', compact=True, id='install', classes='versioncard button focusable')
         self.border_subtitle = self.item.get('version_type', '').title()

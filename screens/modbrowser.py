@@ -80,7 +80,7 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
 
         self.input.focus()
 
-        self.debounce('searchs', 0.1, lambda: self.search_mods(), self.filters)
+        self.debounce('search', 0.1, lambda: self.search_mods(), self.filters)
 
         self.filter_sidebar.add_categories(['modloader', 'version', 'type', 'category'])
 
