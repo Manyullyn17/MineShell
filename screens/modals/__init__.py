@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 import importlib
 
 __all__ = [
-    "ContextMenu",
+    "OptionModal",
     "DeleteModal",
     "FilterModal",
     "FolderModal",
@@ -10,7 +10,7 @@ __all__ = [
     "SelectorModal",
     "SortModal",
     "TextDisplayModal",
-    "ModBrowserModal",
+    "ModInstallModal",
 ]
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from .selector_modal import SelectorModal
     from .sort_modal import SortModal
     from .text_display_modal import TextDisplayModal
-    from .modbrowser_modal import ModBrowserModal
+    from .mod_install_modal import ModInstallModal
 
 # Map attribute names to their modules
 _lazy_map = {
@@ -34,7 +34,7 @@ _lazy_map = {
     "SelectorModal": ".selector_modal",
     "SortModal": ".sort_modal",
     "TextDisplayModal": ".text_display_modal",
-    "ModBrowserModal": ".modbrowser_modal",
+    "ModInstallModal": ".mod_install_modal",
 }
 
 def __getattr__(name: str):

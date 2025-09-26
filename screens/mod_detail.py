@@ -12,7 +12,7 @@ from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI
 from backend.api.mojang import get_minecraft_versions
 from backend.storage import InstanceConfig
 
-from screens.modals import TextDisplayModal
+from screens.modals import TextDisplayModal, ModInstallModal
 
 from helpers import NavigationMixin, strip_images, CustomVerticalScroll, DebounceMixin, ModloaderType
 from widgets import FilterSidebar, VersionList
@@ -152,6 +152,9 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
             case 'changelog':
                 self.app.push_screen(TextDisplayModal(f'Changelog - {event.item.get('name', '')}', event.item.get('changelog', '')))
             case 'install':
-                # - add install logic here
-                pass
+                self.install_mod(event.item)
 
+    def install_mod(self, mod: dict):
+        # - select dependencies and install
+        # - installation with progress bars
+        self.app.push_screen(ModInstallModal(mod, self.mod.get('name', 'Unknown Mod')))

@@ -154,3 +154,4 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
         selected_mod = event.item
         self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or '', self.instance))
 
+# - show when mod is already installed
