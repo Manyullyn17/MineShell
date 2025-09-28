@@ -16,8 +16,14 @@ class SortModal(NavigationMixin, CustomModal[tuple[str, bool]]):
     def __init__(self, sortable_columns:list[str], default_sorting: str | None = None):
         super().__init__()
         self.sortable_columns = sortable_columns
+        self.default_sorting: str | None = None
+        self.default_reverse: bool = False
         if default_sorting:
-            self.default_sorting, self.default_reverse = default_sorting.split('-', 1)
+            if default_sorting.startswith('Reverse-'):
+                self.default_reverse = True
+                self.default_sorting = default_sorting.removeprefix('Reverse-')
+            else:
+                self.default_sorting = default_sorting
 
     def compose(self) -> ComposeResult:
         self.grid = Grid(id='sort-grid')
@@ -26,7 +32,7 @@ class SortModal(NavigationMixin, CustomModal[tuple[str, bool]]):
             yield Static('Column: ', classes='sort text')
             self.sort_select = CustomSelect.from_values(self.sortable_columns, value=self.default_sorting, id='sort-select', classes='focusable sort select', allow_blank=False)
             yield self.sort_select
-            self.reverse = Checkbox(label='Reverse', id='sort-reverse', classes='focusable sort checkbox')
+            self.reverse = Checkbox(label='Reverse', value=self.default_reverse, id='sort-reverse', classes='focusable sort checkbox')
             yield self.reverse
             yield Button('Back', id='sort-back-button', classes='focusable sort button')
             yield Button('Done', id='sort-done-button', classes='focusable sort button')
@@ -48,4 +54,3 @@ class SortModal(NavigationMixin, CustomModal[tuple[str, bool]]):
 
     def action_done(self):
         self.dismiss((str(self.sort_select.value), self.reverse.value))
-
