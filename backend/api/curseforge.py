@@ -69,3 +69,8 @@ class CurseforgeAPI(SourceAPI):
     async def get_categories(self) -> list[str]:
         """Get a list of mod categories."""
         ...
+
+    async def get_dependency(self, project_id: str, version_id: str, modloader: str, mc_version: str) -> dict[str, str | list[str]]:
+        """Fetch a dependency mod by project_id and version_id."""
+        ...
+    

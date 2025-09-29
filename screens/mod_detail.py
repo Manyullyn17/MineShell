@@ -157,4 +157,4 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
     def install_mod(self, mod: dict):
         # - select dependencies and install
         # - installation with progress bars
-        self.app.push_screen(ModInstallModal(mod, self.mod.get('name', 'Unknown Mod')))
+        self.app.push_screen(ModInstallModal(mod, self.mod.get('name', 'Unknown Mod'), self.instance, self.source, self.source_api))

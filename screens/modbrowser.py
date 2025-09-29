@@ -119,6 +119,7 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
 
     @on(CustomSelect.Changed, '#modbrowser-source-select')
     def on_source_select_changed(self, event: CustomSelect.Changed) -> None:
+        # - reload filters from new api
         if event.value != self.source:
             self.source = str(event.value)
             self.source_api = self.sources[self.source]['api']

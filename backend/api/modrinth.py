@@ -1,5 +1,6 @@
 import httpx, json
 from aiocache import cached
+from datetime import datetime
 from backend.api import SourceAPI
 
 MODRINTH_API = "https://api.modrinth.com/v2"
@@ -23,6 +24,7 @@ async def _modrinth_request(endpoint: str, params: dict) -> dict:
                 headers=HEADERS
             )
             resp.raise_for_status()
+            print(resp.request.url)
             return resp.json()
     except (httpx.ReadTimeout, httpx.TimeoutException, httpx.HTTPStatusError):
         return {}
@@ -298,3 +300,47 @@ class ModrinthAPI(SourceAPI):
         ]
     
         return categories
+
+    async def get_dependency(self, project_id: str, version_id: str, modloader: str, mc_version: str) -> dict[str, str | list[str]]:
+        """Fetch a dependency mod by project_id and version_id from Modrinth."""
+        project: dict = await cached_request(f'project/{project_id}', {})
+        if not project:
+            return {}
+        
+        version: dict = {}
+        if version_id:
+            version = await cached_request(f'version/{version_id}', {})
+        
+        if not version or not version_id:
+            params = {}
+            params['game_versions'] = json.dumps([mc_version])
+            params['loaders'] = json.dumps([modloader])
+            params['featured'] = True
+            versions: list[dict] = await cached_request(f'project/{project_id}/version', params)
+            
+            priority = {"release": 3, "beta": 2, "alpha": 1}
+            version = max(versions, key=lambda v: (priority.get(v.get('version_type', ''), 0), datetime.fromisoformat(v.get('date_published', '1970-01-01T00:00:00Z'))))
+        
+        dep = {
+            'project_id': project.get('id'),
+            'slug': project.get('slug'),
+            'name': project.get('title'),
+            'client_side': project.get('client_side'),
+            'server_side': project.get('server_side'),
+            'type': 'mod' if any(loader in MODLOADERS for loader in project.get('loaders', [])) else 'datapack',
+        }
+
+        if version:
+            primary_file: dict = next((f for f in version.get('files', []) if f.get('primary', False)), version.get('files', [{}])[0])
+            dep.update({
+                'version_id': version.get('id'),
+                'version_number': version.get('version_number'),
+                'date_published': version.get('date_published'),
+                'downloads': version.get('downloads'),
+                'version_type': version.get('version_type'),
+                'file_url': primary_file.get('url', ''),
+                'file_name': primary_file.get('filename', ''),
+            })
+
+        return dep
+    
