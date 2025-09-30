@@ -23,6 +23,7 @@ class ModEntry(BaseModel):
     install_date: datetime
     from_modpack: bool = False
     is_override: bool = False
+    # - save path per mod
 
     def formatted_date(self, format=DATE_FORMAT) -> str:
         """Get install date using default or user specified formatting."""
@@ -35,8 +36,7 @@ class ModEntry(BaseModel):
         return format_date(self.release_date.isoformat(), format)
 
 class ModList(BaseModel):
-    # - use Field(default_factory=list)?
-    mods: List[ModEntry] = []
+    mods: List[ModEntry] = Field(default_factory=list)
 
     @classmethod
     def load(cls, path: Path) -> "ModList":
@@ -69,7 +69,7 @@ class ModList(BaseModel):
         mod = self.get_mod(mod_id)
         if not mod:
             return False
-        # - change to use datapacks path
+        # - use path from mod
         del_path = instance_path / (Path("mods") if mod.type == 'mod' else Path("world")) / "datapacks" / mod.filename
         try:
             del_path.unlink(missing_ok=True) # delete mod file, if missing -> still runs code to delete from modlist
@@ -83,10 +83,11 @@ class ModList(BaseModel):
         mod = self.get_mod(mod_id)
         if not mod:
             return False
+        # - use path from mod
         if mod.type == 'mod':
             path /= 'mods'
         else:
-            # - datapack disabling not yet supported
+            # - datapack disabling not yet supported, what do to disable datapacks?
             return False
         if mod.enabled:
             return self.disable_mod(mod_id, path)
@@ -180,24 +181,21 @@ class InstanceConfig(BaseModel):
     modpack_version: Optional[str] = None # modpack version number
     modpack_date: Optional[datetime] = None # release date of current modpack version
     modpack_source: Literal['modrinth', 'curseforge', 'ftb', 'modloader'] = 'modloader' # None if modloader only
-    # - need to set source when creating instance, what do for modloader only instances? default modrinth and be able to set in settings?
     source_api: Literal['modrinth', 'curseforge'] = 'modrinth'
     running: bool = False
     stopping: bool = False
+    mods: ModList = Field(default_factory=ModList)
+    path: Path
+    # - put settings in their own settings.json
     jvm_args: List[str] = []
     java_version: Optional[str] = None
     memory_min: Optional[int] = None
     memory_max: Optional[int] = None
     # - change so it's per setting
     overwrite_global_settings: bool = False
-    # mods: ModList = ModList()
-    mods: ModList = Field(default_factory=ModList)
     # Optional per-instance settings overriding global config
     update_disabled_mods: Literal["update_keep_disabled", "skip_update", "update_enable"] = "update_keep_disabled"
     downgrade_behavior: Literal["ask", "keep", "downgrade"] = "ask"
-    backup_marker: Optional[str] = None    # path or timestamp of last backup
-    notes: Optional[str] = None            # extra notes about instance
-    path: Path
 
     MODLOADER_DISPLAY: ClassVar = {
         "fabric": "Fabric",

@@ -100,9 +100,13 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
         version_ids: list[str] = [v['id'] for v in mc_versions]
         if version_ids:
             self.call_later(self.filter_sidebar.add_options, 'version', version_ids, [self.mc_version])
+        else:
+            self.notify(f"Couldn't load Minecraft Versions.", severity='error', timeout=5)
         
         if categories:
             self.call_later(self.filter_sidebar.add_options, 'category', categories)
+        else:
+            self.notify(f"Couldn't load Categories.", severity='error', timeout=5)
 
     @on(Button.Pressed)
     async def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -119,7 +123,6 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
 
     @on(CustomSelect.Changed, '#modbrowser-source-select')
     def on_source_select_changed(self, event: CustomSelect.Changed) -> None:
-        # - reload filters from new api
         if event.value != self.source:
             self.source = str(event.value)
             self.source_api = self.sources[self.source]['api']
@@ -127,6 +130,16 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
             if notify:
                 self.notify(notify, severity='information', timeout=5)
             self.search_mods()
+            self.reload_categories()
+
+    @work(thread=True)
+    async def reload_categories(self):
+        self.call_later(self.filter_sidebar.clear_options, 'category')
+        categories = await self.source_api.get_categories()
+        if categories:
+            self.call_later(self.filter_sidebar.add_options, 'category', categories)
+        else:
+            self.notify(f"Couldn't load Categories.", severity='error', timeout=5)
 
     @on(CustomInput.Changed, '#modbrowser-search')
     def on_input_changed(self, event: CustomInput.Changed) -> None:
