@@ -7,15 +7,15 @@ from textual.widgets import Button, Label, Checkbox
 from backend.api import SourceAPI, ModrinthAPI, CurseforgeAPI
 from backend.storage import InstanceConfig
 
-from helpers import CustomModal, CustomVerticalScroll
+from helpers import NavigationMixin, CustomModal, CustomVerticalScroll
 
-class ModInstallModal(CustomModal[bool]):
+class ModInstallModal(NavigationMixin, CustomModal[bool]):
     """Modal for installing mods. Returns `True` if install successful, `False` otherwise."""
     CSS_PATH = 'styles/mod_install_modal.tcss'
     BINDINGS = [
             Binding('q', 'back', show=False),
             Binding('escape', 'back', show=False),
-        ]
+        ] + NavigationMixin.BINDINGS
 
     def __init__(self, mod: dict, mod_name: str, instance: InstanceConfig, source: str, source_api: SourceAPI):
         super().__init__()
@@ -39,18 +39,19 @@ class ModInstallModal(CustomModal[bool]):
                 yield Button('Install', id='mod-install-install-button', classes='mod-install button focusable')
 
     def on_mount(self) -> None:
+        self.dependency_scroll.loading = True
         self.get_dependencies()
-        # - first get dependencies
-        # - mount dependencies to self.dependency_scroll
 
     @work(thread=True)
     async def get_dependencies(self):
-        project_ids = [dep.get('project_id', '') for dep in self.dependencies]
-        version_ids = [dep.get('version_id', '') for dep in self.dependencies]
+        dependencies = await self.source_api.get_modlist(self.dependencies, self.mc_version, self.modloader)
+        for dep in dependencies:
+            dep['dependency_type'] = [dependency.get('dependency_type', 'unknown') for dependency in self.dependencies if dependency.get('project_id') == dep.get('project_id')][0]
 
-        dependencies = []
-        for dep in self.dependencies:
-            dependencies.append(await self.source_api.get_dependency(dep.get('project_id', ''), dep.get('version_id', ''), self.modloader, self.mc_version))
+        # - add check if dependency already installed
+        # - mount dependencies to self.dependency_scroll
+        # dependencies: project_id, version_id, slug, name, description, version_number, date_published, file_name, download_url, loaders, type, server_side, client_side, dependency_type
+
         pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

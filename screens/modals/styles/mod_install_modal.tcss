@@ -10,4 +10,9 @@ ModalScreen {
     min-width: 30;
     min-height: 10;
     border: panel $accent-lighten-1 80%;
+    padding: 0 1;
+}
+
+.mod-install.button {
+    margin: 0 1 0 0;
 }

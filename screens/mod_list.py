@@ -28,11 +28,10 @@ class ModListScreen(NavigationMixin, Screen):
         Binding('a', "add_mods", "Add Mods", show=True),
         Binding('f', "filter", "Filter", show=True),
         Binding('s', "sort", "Sort", show=True),
-        Binding('s', 'reset', 'Reset Filter/Sort', show=True),
+        Binding('r', 'reset', 'Reset Filter/Sort', show=True),
     ] + NavigationMixin.BINDINGS
 
-    # - add reset filter/sort keybind (also clears search?)
-    # - make delete, enable/disable and update not show up when focusing datatable
+    # - make delete, enable/disable and update only show up when focusing datatable
 
     selected_mod: str | None = None
 
@@ -190,6 +189,8 @@ class ModListScreen(NavigationMixin, Screen):
     def action_reset(self):
         self.filter = {}
         self.current_sorting = 'Name'
+        self.query_one('#modlist-search', CustomInput).value = ''
+        self.filter_label.update('')
         self._filter_table()
 
     def delete_mod(self):

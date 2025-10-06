@@ -24,125 +24,83 @@ class NavigationMixin:
     ]
 
     def _find_next_focus(self: FocusableScreen, current: Widget, direction: str) -> Widget | None:
-        def get_candidates(self) -> list[Widget]:
-            candidates = []
-            for w in self.query('.focusable'):
+        """Find the next focusable widget in the given direction."""
+        # --- Helper: compute projection region ---
+        def compute_projection(focused_region: Region, direction: str, expanded: bool = False) -> Region:
+            if not expanded:
+                if direction == "up":
+                    return Region(focused_region.x, 0, focused_region.width, focused_region.y)
+                elif direction == "down":
+                    return Region(focused_region.x, focused_region.y, focused_region.width, self.size.height - focused_region.y)
+                elif direction == "left":
+                    return Region(0, focused_region.y, focused_region.x - 1, focused_region.height)
+                elif direction == "right":
+                    return Region(focused_region.right, focused_region.y, self.size.width - focused_region.right, focused_region.height)
+            else:
+                expanded_width = focused_region.width * 2
+                expanded_x = focused_region.x - focused_region.width // 2
+                if direction == "up":
+                    return Region(expanded_x, 0, expanded_width, focused_region.y - 1)
+                elif direction == "down":
+                    return Region(expanded_x, focused_region.bottom, expanded_width, self.size.height - focused_region.bottom)
+                elif direction == "left":
+                    return Region(0, 0, focused_region.x - 1, self.size.height)
+                elif direction == "right":
+                    return Region(focused_region.right, 0, self.size.width - focused_region.right, self.size.height)
+            return focused_region  # fallback
+
+        # --- Helper: filter candidates ---
+        def is_candidate(w: Widget) -> bool:
+            if w == current or not w.region.intersection(proj_region):
+                return False
+            try:
+                if direction == "down" and current in w.query_one("Contents").children:
+                    return False
+            except NoMatches:
+                pass
+            if current in w.children:
+                return False
+            return True
+
+        # --- Helper: collect candidates ---
+        def get_candidates() -> list[Widget]:
+            result = []
+            for w in self.query(".focusable"):
                 if isinstance(w, TabbedContent):
-                    # if TabbedContent, use ContentTabs for region
-                    w = w.query_one('ContentTabs')
-                # if same widget or not in region, skip
-                if w == current or not w.region.intersection(proj_region):
-                    continue
-                try:
-                    # ignore collapsible if inside and pressing down to get out
-                    if current in w.query_one('Contents').children and direction == 'down':
-                        continue
-                except NoMatches:
-                    pass
-                if current in w.children:
+                    w = w.query_one("ContentTabs")
+                if not is_candidate(w):
                     continue
                 if isinstance(w, Collapsible):
-                    # find the CollapsibleTitle child of the collapsible
-                    title = w.query_one('CollapsibleTitle')
+                    title = w.query_one("CollapsibleTitle")
                     if title:
-                        candidates.append(title)
+                        result.append(title)
                 else:
-                    candidates.append(w)
-            return candidates
+                    result.append(w)
+            return result
 
-        # Get focused widget region
+        # --- Start main logic ---
         focused_region = current.region
+        proj_region = compute_projection(focused_region, direction)
+        candidates = get_candidates()
 
-        # Projection rectangle in the moving direction
-        proj_region = Region.from_offset(focused_region.offset, focused_region.size)
-
-        # Adjust projection depending on direction
-        if direction == "up":
-            proj_region = Region(
-                focused_region.x,
-                0,
-                focused_region.width,
-                focused_region.y
-            )
-        elif direction == "down":
-            proj_region = Region(
-                focused_region.x,
-                focused_region.y, # use top edge to allow detection of nested widgets in collapsible
-                focused_region.width,
-                self.size.height - focused_region.y,
-            )
-        elif direction == "left":
-            proj_region = Region(
-                0,
-                focused_region.y,
-                focused_region.x - 1,
-                focused_region.height,
-            )
-        elif direction == "right":
-            proj_region = Region(
-                focused_region.right,
-                focused_region.y,
-                self.size.width - focused_region.right,
-                focused_region.height,
-            )
-
-        candidates = get_candidates(self)
-        
-        expanded_width = focused_region.width * 2
-        expanded_x = focused_region.x - focused_region.width // 2
-
-        # If nothing intersects, expand projection to full row/column
+        # If nothing intersects, expand projection
         if not candidates:
-            if direction == "up":
-                proj_region = Region(
-                    # 0,
-                    expanded_x,
-                    0,
-                    # self.size.width,
-                    expanded_width,
-                    focused_region.y - 1
-                )
-            elif direction == "down":
-                proj_region = Region(
-                    # 0,
-                    expanded_x,
-                    focused_region.bottom,
-                    # self.size.width,
-                    expanded_width,
-                    self.size.height - focused_region.bottom,
-                )
-            elif direction == "left":
-                proj_region = Region(
-                    0,
-                    0,
-                    focused_region.x - 1,
-                    self.size.height,
-                )
-            elif direction == "right":
-                proj_region = Region(
-                    focused_region.right,
-                    0,
-                    self.size.width - focused_region.right,
-                    self.size.height,
-                )
-            candidates = get_candidates(self)
+            proj_region = compute_projection(focused_region, direction, expanded=True)
+            candidates = get_candidates()
 
-        # Pick the nearest candidate
+        # --- Pick nearest candidate ---
         if candidates:
-            def distance(w: Widget):
+            def distance(w: Widget) -> tuple[float, float]:
                 fx, fy = focused_region.center
-
-                # Clamp focus point to widget bounds
                 tx = min(max(fx, w.region.x), w.region.right)
                 ty = min(max(fy, w.region.y), w.region.bottom)
-
                 dx = abs(tx - fx)
                 dy = abs(ty - fy)
+                return dy, dx
 
-                return (dy, dx)
+            return min(candidates, key=distance)
 
-            next_widget = min(candidates, key=distance)
-            return next_widget
+        return None
 
     def action_focus_move(self: FocusableScreen, direction: str):
         focused = self.focused
