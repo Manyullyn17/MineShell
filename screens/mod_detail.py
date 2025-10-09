@@ -29,16 +29,17 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
         "curseforge": CurseforgeAPI(),
     }
 
-    def __init__(self, mod: dict, source: str, sub_title: str, instance: InstanceConfig) -> None:
+    def __init__(self, mod: dict, source: str, sub_title: str, instance: InstanceConfig, modloader: list, version: list, type: list) -> None:
         super().__init__()
         self.mod = mod
         self.source = source
         self.source_api: SourceAPI = self.sources[self.source]
         self.sub_title = sub_title + f' > {mod.get('name', '')}'
         self.instance = instance
-        self.modloader = instance.modloader
-        self.mc_version = instance.minecraft_version
-        self.filters = {'loaders': [self.modloader], 'game_versions': [self.mc_version]}
+        self.modloader = modloader or [instance.modloader]
+        self.mc_version = version or [instance.minecraft_version]
+        # - filter von modbrowser übernehmen
+        self.filters = {'loaders': modloader, 'game_versions': version}
         self.versions_loading = True
 
     def compose(self) -> ComposeResult:
@@ -101,8 +102,9 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
 
         modloaders = list({loader for version in mod_versions for loader in version.get('loaders', [])})
 
-        if self.modloader not in modloaders:
-            self.filters['loaders'] = []
+        for loader in self.modloader:
+            if loader not in modloaders:
+                self.filters['loaders'] = []
 
         release_versions = [v.get('id', '') for v in await get_minecraft_versions()]
         present_versions = list({mc_version for version in mod_versions for mc_version in version.get('game_versions', [])})
@@ -119,8 +121,8 @@ class ModDetailScreen(NavigationMixin, DebounceMixin, Screen):
             if any(mc in v.get("game_versions", []) for mc in mc_versions)
         ]
 
-        self.filter_sidebar.add_options('modloader', sorted(modloaders), [self.modloader])
-        self.filter_sidebar.add_options('version', mc_versions, [self.mc_version])
+        self.filter_sidebar.add_options('modloader', sorted(modloaders), self.modloader)
+        self.filter_sidebar.add_options('version', mc_versions, self.mc_version)
         self.filter_sidebar.add_options('type', types)
 
         self.call_later(self.set_versions, self.mod_versions, self.filters)

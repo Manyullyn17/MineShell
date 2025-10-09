@@ -166,6 +166,11 @@ class ModBrowserScreen(NavigationMixin, DebounceMixin, Screen):
     @on(ModList.Selected)
     async def on_mod_list_selected(self, event: ModList.Selected) -> None:
         selected_mod = event.item
-        self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or '', self.instance))
+        # - send current filters
+        filters = self.filter_sidebar.get_selected_filters()
+        modloader = filters.get('modloader', [self.instance.modloader])
+        version = filters.get('version', [self.instance.minecraft_version])
+        type = filters.get('type', ['mod', 'datapack'])
+        self.app.push_screen(ModDetailScreen(selected_mod, self.source, self.sub_title or '', self.instance, modloader, version, type))
 
 # - show when mod is already installed

@@ -22,8 +22,8 @@ class ModInstallModal(NavigationMixin, CustomModal[bool]):
         self.mod = mod
         self.dependencies = mod.get('dependencies', [])
         self.instance = instance
-        self.modloader = instance.modloader
-        self.mc_version = instance.minecraft_version
+        self.modloader = mod.get('loaders', [instance.modloader])
+        self.mc_version = mod.get('game_versions', [instance.minecraft_version])
         self.source = source
         self.source_api = source_api
         self.border_title = 'Select dependencies to install:'
@@ -47,6 +47,9 @@ class ModInstallModal(NavigationMixin, CustomModal[bool]):
         dependencies = await self.source_api.get_modlist(self.dependencies, self.mc_version, self.modloader)
         for dep in dependencies:
             dep['dependency_type'] = [dependency.get('dependency_type', 'unknown') for dependency in self.dependencies if dependency.get('project_id') == dep.get('project_id')][0]
+            dep['installed'] = True if self.instance.mods.get_mod(dep.get('project_id', '')) else False
+            dep['force_install'] = True if dep.get('dependency_type', '') == 'required' else False
+            dep['client_only'] = True if dep.get('server_side', '') == 'unsupported' else False
 
         # - add check if dependency already installed
         # - mount dependencies to self.dependency_scroll
